@@ -123,6 +123,7 @@ GameObject:
   - component: {fileID: 61527601}
   - component: {fileID: 61527600}
   - component: {fileID: 61527599}
+  - component: {fileID: 61527602}
   - component: {fileID: 61527598}
   - component: {fileID: 61527597}
   m_Layer: 0
@@ -224,6 +225,20 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &61527602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 61527596}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e6d232ab8ed64a55af2e0a5d0f9e0d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  port: 11000
+  agentCamera: {fileID: 972160093}
 --- !u!1 &170076733
 GameObject:
   m_ObjectHideFlags: 0

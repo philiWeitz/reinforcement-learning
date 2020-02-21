@@ -17,6 +17,21 @@ public class AgentMovement : MonoBehaviour
 
     private Vector3 moveDirection = Vector3.zero;
 
+    public static AgentMovement instance;
+
+    private void Awake()
+    {
+        if (AgentMovement.instance == null)
+        {
+            AgentMovement.instance = this;
+        }
+        else if (AgentMovement.instance != this)
+        {
+            Destroy(this.gameObject);
+        }
+        DontDestroyOnLoad(this.gameObject);
+    }
+
     void Start()
     {
         initialPosition = this.transform.position;
@@ -66,5 +81,31 @@ public class AgentMovement : MonoBehaviour
             this.transform.position = initialPosition;
             isNotGroundedCount = 0;
         }
+    }
+
+    public void MakeMove(MoveModel moveModel)
+    {
+        float horizontal = 0f;
+        float vertical = 0f;
+
+        if (moveModel.horizontal == "LEFT")
+        {
+            horizontal = -1;
+        }
+        if (moveModel.horizontal == "RIGHT")
+        {
+            horizontal = 1;
+        }
+
+        if (moveModel.vertical == "FORWARD")
+        {
+            vertical = 1;
+        }
+        if (moveModel.vertical == "BACKWARDS")
+        {
+            vertical = -1;
+        }
+
+        MoveAgent(horizontal, vertical);
     }
 }
