@@ -9,6 +9,8 @@ public class PythonConnector : MonoBehaviour
 
     public Camera agentCamera;
 
+    public float repeatEverySec = 0.5f;
+
     private byte[] _recieveBuffer = new byte[8142];
 
     private Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -16,7 +18,7 @@ public class PythonConnector : MonoBehaviour
 
     void Start()
     {
-        InvokeRepeating("SendData", 1, 1);
+        InvokeRepeating("SendData", 1, repeatEverySec);
     }
 
     void Update()
@@ -56,9 +58,8 @@ public class PythonConnector : MonoBehaviour
             Buffer.BlockCopy(_recieveBuffer, 0, jsonData, 0, recieved);
 
             MoveModel moveModel = MoveModel.FromJsonBytes(jsonData);
-            AgentMovement.instance.MakeMove(moveModel);
+            AgentMovement.instance.moveModelFromPython = moveModel;
         }
-
         clientSocket.BeginReceive(_recieveBuffer, 0, _recieveBuffer.Length, SocketFlags.None, new AsyncCallback(ReceiveCallback), null);
     }
 

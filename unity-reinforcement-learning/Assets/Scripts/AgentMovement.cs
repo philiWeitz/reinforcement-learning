@@ -4,10 +4,13 @@ using UnityEngine;
 
 public class AgentMovement : MonoBehaviour
 {
-    CharacterController characterController;
-
     public float speed = 6.0f;
+
     public float gravity = 20.0f;
+
+    public volatile MoveModel moveModelFromPython = null;
+
+    private CharacterController characterController;
 
     private int isNotGroundedCount;
 
@@ -36,12 +39,20 @@ public class AgentMovement : MonoBehaviour
     {
         initialPosition = this.transform.position;
         initialRotation = this.transform.rotation;
+
         characterController = GetComponent<CharacterController>();
     }
 
     void Update()
     {
-        MoveAgent(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        if (moveModelFromPython == null)
+        {
+            MoveAgent(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        }
+        else
+        {
+            MakeMove(moveModelFromPython);
+        }
     }
 
     void MoveAgent(float horizontal, float vertical)

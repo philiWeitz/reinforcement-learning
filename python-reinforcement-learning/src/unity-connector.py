@@ -6,6 +6,8 @@ import socket
 import json
 import sys
 
+import network
+
 # Create a TCP/IP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -37,17 +39,23 @@ while True:
 
                 try:
                     data = json.loads(data)
-                    print("parsed JSON object:", data['data'])
+                    # print("parsed JSON object:", data['data'])
 
                     colors = data['colors']
                     gray_scale_image = np.reshape(colors, (50, 120))
                     gray_scale_image = np.flip(gray_scale_image, 0)
 
-                    # Image debug output
-                    if (image_counter % 5) == 0:
-                        plt.imshow(gray_scale_image, cmap='gray', vmin=0, vmax=255)
-                        plt.show(block=False)
-                        plt.pause(0.1)
+                    # make a prediction based on input image
+                    motion = network.predict(gray_scale_image)
+                    connection.send(json.dumps(motion).encode('utf-8'))
+
+                    # debug info
+                    # if (image_counter % 20) == 0:
+                        # print(motion)
+                        # np.save('gray_scale_image.npy', gray_scale_image)
+                        # plt.imshow(gray_scale_image, cmap='gray', vmin=0, vmax=255)
+                        # plt.show(block=False)
+                        # plt.pause(0.1)
 
                     image_counter += 1
                 except:
