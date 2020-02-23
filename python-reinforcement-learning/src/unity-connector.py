@@ -21,10 +21,34 @@ sock.bind(server_address)
 sock.listen(1)
 
 # shows an image every 5 seconds
-show_image = False
+show_image = True
 image_show_timeout = time.time() * 1000.0
 
+show_loss_history_plot = True
+show_reward_sum_history_plot = True
+
 episode_counter = 0
+
+def show_loss_history(loss_history):
+    if show_loss_history_plot:
+        plt.figure(0)
+        
+        ax = sns.lineplot(data=np.array(loss_history))
+        ax.set_title('Loss History')
+
+        plt.show(block=False)
+        plt.pause(0.001)
+
+
+def show_reward_sum_history(reward_sum_history):
+    if show_reward_sum_history_plot:
+        plt.figure(1)
+    
+        ax = sns.lineplot(data=np.array(reward_sum_history))
+        ax.set_title('Reward Sum History')
+
+        plt.show(block=False)
+        plt.pause(0.001)
 
 
 def show_received_image(image):
@@ -32,16 +56,22 @@ def show_received_image(image):
     now = time.time() * 1000.0
 
     if (show_image and now > image_show_timeout) == True:
+        plt.figure(2)
+        plt.title('Agent Input Image')
         plt.imshow(image, cmap='gray', vmin=0, vmax=255)
         plt.show(block=False)
         plt.pause(0.001)
         image_show_timeout = now + (3 * 1000)
+
 
 def run_socket_server():
     global episode_counter
 
     epsilon = 100
     data_buffer = ""
+    
+    loss_history = []
+    reward_sum_history = []
 
     reward_record = []
     state_record = []
@@ -93,11 +123,17 @@ def run_socket_server():
 
                         # episode is over :(
                         if not isAgentOnTrack:
+                            # train and evaluate the model
                             network.train(state_record, action_record, reward_record)
+                            loss_history.append(network.evaluate(state_record, action_record, reward_record))
 
+                            reward_sum_history.append(sum(reward_record))
                             state_record = []
                             action_record = []
                             reward_record = []
+
+                            if episode_counter > 100:
+                                epsilon = 10
 
                             print("Episode:", episode_counter, ", Epsilon:", epsilon)
                             # reset environment
@@ -105,6 +141,12 @@ def run_socket_server():
 
                             # increase the episode
                             episode_counter += 1
+
+                            # show reward history
+                            show_reward_sum_history(reward_sum_history)
+                            # show loss function results
+                            show_loss_history(loss_history)
+
                     except Exception as e:
                         print('unable to parse json from data string', e)
             else:

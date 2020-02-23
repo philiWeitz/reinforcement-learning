@@ -26,8 +26,8 @@ def create_model():
     model.add(Conv2D(32, (5, 5), strides=2))
     model.add(MaxPooling2D(pool_size=(3,3), padding='valid'))
     model.add(Flatten())
-    model.add(Dense(120, activation='linear'))
-    model.add(Dense(OUTPUT_SHAPE, activation='linear'))
+    model.add(Dense(120, activation='sigmoid'))
+    model.add(Dense(OUTPUT_SHAPE, activation='sigmoid'))
 
     model.compile(optimizer='adam', loss='mean_squared_error')
     return model
@@ -71,9 +71,16 @@ def train(state_record, action_record, reward_record):
     X = np.array([expand_image_dimension(image) for image in state_record])
     y = np.array([action_to_vector(action) for action in action_record])
         
-    # model.fit(X, y, sample_weight=discounted_rewards, batch_size=512, epochs=1, verbose=0)
     model.fit(X, y, sample_weight=discounted_rewards, batch_size=512, epochs=1, verbose=0)
     print('Done')
+
+
+def evaluate(state_record, action_record, reward_record):
+    discounted_rewards = np.array(discount_n_standardise(reward_record))
+    
+    X = np.array([expand_image_dimension(image) for image in state_record])
+    y = np.array([action_to_vector(action) for action in action_record])
+    return model.evaluate(X, y, sample_weight=discounted_rewards, batch_size=512, verbose=0)
 
 
 # epsilon of 0 -> no random moves, epsilon of 100 -> 100% random moves
@@ -104,8 +111,10 @@ def discount_rewards(r):
 
 def discount_n_standardise(r):
     dr = discount_rewards(r)
+    dr_std = max(1, dr.std())
+
     print("Rewards:", dr)
-    dr = (dr - dr.mean()) / dr.std()
+    dr = (dr - dr.mean()) / dr_std
     print("Discounted rewards:", dr)
     return dr
 
