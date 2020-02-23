@@ -6,6 +6,7 @@ import socket
 import json
 import sys
 
+import time
 import network
 
 # Create a TCP/IP socket
@@ -19,11 +20,30 @@ sock.bind(server_address)
 # Listen for incoming connections
 sock.listen(1)
 
-# show the image every x times
-image_counter = 0
+# shows an image every 5 seconds
+show_image = False
+image_show_timeout = time.time() * 1000.0
 
-while True:
-    # Wait for a connection
+episode_counter = 0
+
+
+def show_received_image(image):
+    global image_show_timeout
+    now = time.time() * 1000.0
+
+    if (show_image and now > image_show_timeout) == True:
+        plt.imshow(image, cmap='gray', vmin=0, vmax=255)
+        plt.show(block=False)
+        plt.pause(0.001)
+        image_show_timeout = now + (3 * 1000)
+
+def run_socket_server():
+    global episode_counter
+
+    reward_record = []
+    state_record = []
+    action_record = []
+
     print('waiting for a connection')
     connection, client_address = sock.accept()
 
@@ -35,29 +55,48 @@ while True:
             byte_data = connection.recv(200000)
             if byte_data:
                 data = byte_data.decode('utf-8')
-                # print(data);
 
                 try:
                     data = json.loads(data)
-                    # print("parsed JSON object:", data['data'])
 
                     colors = data['colors']
                     gray_scale_image = np.reshape(colors, (50, 120))
                     gray_scale_image = np.flip(gray_scale_image, 0)
 
+                    epsilon = 100
+
+                    if episode_counter > 100:
+                        epsilon = 10
+
                     # make a prediction based on input image
-                    motion = network.predict(gray_scale_image)
+                    motion = network.predict(gray_scale_image, epsilon=epsilon)
                     connection.send(json.dumps(motion).encode('utf-8'))
 
-                    # debug info
-                    # if (image_counter % 20) == 0:
-                        # print(motion)
-                        # np.save('gray_scale_image.npy', gray_scale_image)
-                        # plt.imshow(gray_scale_image, cmap='gray', vmin=0, vmax=255)
-                        # plt.show(block=False)
-                        # plt.pause(0.1)
+                    # print received image from unity
+                    show_received_image(gray_scale_image)
+                    
+                    # get the reward
+                    isAgentOnTrack =  data['isOnTrack']
+                    reward_record.append(1.0 if isAgentOnTrack else -5.0)
+                    
+                    # add state and action record
+                    state_record.append(gray_scale_image)
+                    action_record.append(motion)
 
-                    image_counter += 1
+                    # episode is over :(
+                    if not isAgentOnTrack:
+                        network.train(state_record, action_record, reward_record)
+
+                        state_record = []
+                        action_record = []
+                        reward_record = []
+
+                        print("Episode:", episode_counter, ", Epsilon:", epsilon)
+                        # reset environment
+                        connection.send("RESET".encode('utf-8'))
+
+                        # increase the episode
+                        episode_counter += 1
                 except:
                     print('unable to parse json from data string')
             else:
@@ -66,3 +105,7 @@ while True:
     finally:
         # Clean up the connection
         connection.close()
+
+
+while True:
+    run_socket_server()

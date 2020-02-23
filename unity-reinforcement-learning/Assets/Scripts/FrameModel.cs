@@ -5,13 +5,13 @@ using UnityEngine;
 [Serializable]
 public class FrameModel
 {
-    public string data;
+    public bool isOnTrack;
 
     public uint[] colors;
 
-    public FrameModel(string data, Color[] colors)
+    public FrameModel(bool isOnTrack, Color[] colors)
     {
-        this.data = data;
+        this.isOnTrack = isOnTrack;
 
         this.colors = new uint[colors.Length];
 

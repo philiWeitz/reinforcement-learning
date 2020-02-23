@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
+using System.Text;
 
 public class PythonConnector : MonoBehaviour
 {
@@ -24,7 +25,7 @@ public class PythonConnector : MonoBehaviour
     void Update()
     {
         // always try to reconnect
-        if (!clientSocket.IsBound)
+        if (!clientSocket.Connected)
         {
             SetupConnection();
         }
@@ -44,9 +45,8 @@ public class PythonConnector : MonoBehaviour
         {
             clientSocket.Connect(new IPEndPoint(IPAddress.Loopback, port));
             clientSocket.BeginReceive(_recieveBuffer, 0, _recieveBuffer.Length, SocketFlags.None, new AsyncCallback(ReceiveCallback), null);
-
         }
-        catch (SocketException ex) {}
+        catch (SocketException) {}
     }
 
     private void ReceiveCallback(IAsyncResult AR)
@@ -54,25 +54,36 @@ public class PythonConnector : MonoBehaviour
         int recieved = clientSocket.EndReceive(AR);
 
         if (recieved > 0) {
-            byte[] jsonData = new byte[recieved];
-            Buffer.BlockCopy(_recieveBuffer, 0, jsonData, 0, recieved);
+            byte[] data = new byte[recieved];
+            Buffer.BlockCopy(_recieveBuffer, 0, data, 0, recieved);
 
-            MoveModel moveModel = MoveModel.FromJsonBytes(jsonData);
-            AgentMovement.instance.moveModelFromPython = moveModel;
+            string dataString = Encoding.UTF8.GetString(data);
+            if (dataString == "RESET")
+            {
+                Status.instance.resetAgent = true;
+            }
+            else
+            {
+                // set the move model received by the socket
+                MoveModel moveModel = MoveModel.FromJsonBytes(data);
+                Status.instance.networkMoveModel = moveModel;
+            }
         }
+        // start receiving data again
         clientSocket.BeginReceive(_recieveBuffer, 0, _recieveBuffer.Length, SocketFlags.None, new AsyncCallback(ReceiveCallback), null);
     }
 
     private void SendData()
     {
-        if (clientSocket.Connected)
+        // only send picture when the simmulation is running
+        if (clientSocket.Connected && Status.instance.isSimulationRunning)
         {
             Texture2D agentTexture = GetAgentCameraTexture();
 
             if (agentTexture)
             {
                 Color[] colors = agentTexture.GetPixels();
-                FrameModel frame = new FrameModel("Hello Frame", colors);
+                FrameModel frame = new FrameModel(Status.instance.isOnTrack, colors);
 
                 byte[] data = frame.ToJsonBytes();
                 Destroy(agentTexture);
@@ -80,6 +91,13 @@ public class PythonConnector : MonoBehaviour
                 SocketAsyncEventArgs socketAsyncData = new SocketAsyncEventArgs();
                 socketAsyncData.SetBuffer(data, 0, data.Length);
                 clientSocket.SendAsync(socketAsyncData);
+
+                // Stop simulation when the agent is off track
+                if (!Status.instance.isOnTrack)
+                {
+                    Status.instance.isSimulationRunning = false;
+                    Debug.Log("Stopped sending frames");
+                }
             }
         }
     }
