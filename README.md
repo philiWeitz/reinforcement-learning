@@ -1,5 +1,7 @@
 # Unity - Python Reinforcement Learning
 
+![Example](/documents/example.gif)
+
 ## install dependencies
 1. navigate to ```cd ./python-reinforcement-learning```
 1. start a new virtualenv ```pipenv shell```
