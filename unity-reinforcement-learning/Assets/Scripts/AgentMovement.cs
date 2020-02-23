@@ -21,7 +21,7 @@ public class AgentMovement : MonoBehaviour
 
     void Update()
     {
-        if (Status.instance.resetAgent)
+        if (Status.instance.resetAgent || Input.GetKeyUp("space"))
         {
             ResetAgent();
             return;
@@ -31,7 +31,7 @@ public class AgentMovement : MonoBehaviour
         if (Status.instance.isOnTrack)
         {
             if (HasUserInput())
-            {
+            {   
                 // always prefere user input
                 MoveAgent(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             }
@@ -55,8 +55,7 @@ public class AgentMovement : MonoBehaviour
 
     private bool HasUserInput()
     {
-        return Input.GetAxisRaw("Horizontal") < -0.1 || Input.GetAxisRaw("Horizontal") > 0.1 ||
-            Input.GetAxisRaw("Vertical") < -0.1 || Input.GetAxisRaw("Vertical") > 0.1;
+        return Input.anyKey;
     }
 
     private void ResetAgent()
