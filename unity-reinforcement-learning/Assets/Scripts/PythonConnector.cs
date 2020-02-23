@@ -96,7 +96,6 @@ public class PythonConnector : MonoBehaviour
                 if (!Status.instance.isOnTrack)
                 {
                     Status.instance.isSimulationRunning = false;
-                    Debug.Log("Stopped sending frames");
                 }
             }
         }

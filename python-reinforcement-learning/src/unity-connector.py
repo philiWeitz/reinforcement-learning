@@ -40,6 +40,9 @@ def show_received_image(image):
 def run_socket_server():
     global episode_counter
 
+    epsilon = 100
+    data_buffer = ""
+
     reward_record = []
     state_record = []
     action_record = []
@@ -52,53 +55,58 @@ def run_socket_server():
 
         # Receive the data in small chunks and retransmit it
         while connection:
-            byte_data = connection.recv(200000)
+            byte_data = connection.recv(10000)
+
             if byte_data:
                 data = byte_data.decode('utf-8')
+                data_buffer += data
+                
+                # find json end
+                json_end_idx = data_buffer.find('}') + 1
 
-                try:
-                    data = json.loads(data)
+                if json_end_idx > 0:
+                    # we found a valid json object
+                    json_string = data_buffer[slice(0,json_end_idx)]
+                    data_buffer = data_buffer[slice(json_end_idx, len(data_buffer))]
 
-                    colors = data['colors']
-                    gray_scale_image = np.reshape(colors, (50, 120))
-                    gray_scale_image = np.flip(gray_scale_image, 0)
+                    try:
+                        json_object = json.loads(json_string)
 
-                    epsilon = 100
+                        colors = json_object['colors']
+                        gray_scale_image = np.reshape(colors, (50, 120))
+                        gray_scale_image = np.flip(gray_scale_image, 0)
 
-                    if episode_counter > 100:
-                        epsilon = 10
+                        # make a prediction based on input image
+                        motion = network.predict(gray_scale_image, epsilon=epsilon)
+                        connection.send(json.dumps(motion).encode('utf-8'))
 
-                    # make a prediction based on input image
-                    motion = network.predict(gray_scale_image, epsilon=epsilon)
-                    connection.send(json.dumps(motion).encode('utf-8'))
+                        # print received image from unity
+                        show_received_image(gray_scale_image)
+                        
+                        # get the reward
+                        isAgentOnTrack =  json_object['isOnTrack']
+                        reward_record.append(1.0 if isAgentOnTrack else -5.0)
+                        
+                        # add state and action record
+                        state_record.append(gray_scale_image)
+                        action_record.append(motion)
 
-                    # print received image from unity
-                    show_received_image(gray_scale_image)
-                    
-                    # get the reward
-                    isAgentOnTrack =  data['isOnTrack']
-                    reward_record.append(1.0 if isAgentOnTrack else -5.0)
-                    
-                    # add state and action record
-                    state_record.append(gray_scale_image)
-                    action_record.append(motion)
+                        # episode is over :(
+                        if not isAgentOnTrack:
+                            network.train(state_record, action_record, reward_record)
 
-                    # episode is over :(
-                    if not isAgentOnTrack:
-                        network.train(state_record, action_record, reward_record)
+                            state_record = []
+                            action_record = []
+                            reward_record = []
 
-                        state_record = []
-                        action_record = []
-                        reward_record = []
+                            print("Episode:", episode_counter, ", Epsilon:", epsilon)
+                            # reset environment
+                            connection.send("RESET".encode('utf-8'))
 
-                        print("Episode:", episode_counter, ", Epsilon:", epsilon)
-                        # reset environment
-                        connection.send("RESET".encode('utf-8'))
-
-                        # increase the episode
-                        episode_counter += 1
-                except:
-                    print('unable to parse json from data string')
+                            # increase the episode
+                            episode_counter += 1
+                    except Exception as e:
+                        print('unable to parse json from data string', e)
             else:
                 break
             

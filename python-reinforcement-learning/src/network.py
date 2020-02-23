@@ -105,8 +105,8 @@ def discount_rewards(r):
 def discount_n_standardise(r):
     dr = discount_rewards(r)
     print("Rewards:", dr)
-    # dr = (dr - dr.mean()) / dr.std()
-    # print("Discounted rewards:", dr)
+    dr = (dr - dr.mean()) / dr.std()
+    print("Discounted rewards:", dr)
     return dr
 
 
