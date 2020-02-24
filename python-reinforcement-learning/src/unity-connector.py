@@ -29,6 +29,15 @@ show_reward_sum_history_plot = True
 
 episode_counter = 0
 
+# only impacts the decrease of epsilond througout the training
+MAX_EPISODES = 100
+
+
+# linearly decrese epsilon
+def get_epsilon(episode_counter, max_epsiodes):
+    # always leave at least 10% randomness
+    return max(10, (100 - (episode_counter / max_epsiodes) * 100))
+
 def show_loss_history(loss_history):
     if show_loss_history_plot:
         plt.figure(0)
@@ -67,7 +76,6 @@ def show_received_image(image):
 def run_socket_server():
     global episode_counter
 
-    epsilon = 100
     data_buffer = ""
     
     loss_history = []
@@ -106,6 +114,8 @@ def run_socket_server():
                         gray_scale_image = np.reshape(colors, (50, 120))
                         gray_scale_image = np.flip(gray_scale_image, 0)
 
+                        epsilon = get_epsilon(episode_counter, max_epsiodes=MAX_EPISODES)
+
                         # make a prediction based on input image
                         motion = network.predict(gray_scale_image, epsilon=epsilon)
                         connection.send(json.dumps(motion).encode('utf-8'))
@@ -132,9 +142,6 @@ def run_socket_server():
                             action_record = []
                             reward_record = []
 
-                            if episode_counter > 100:
-                                epsilon = 10
-
                             print("Episode:", episode_counter, ", Epsilon:", epsilon)
                             # reset environment
                             connection.send("RESET".encode('utf-8'))
@@ -158,4 +165,7 @@ def run_socket_server():
 
 
 while True:
-    run_socket_server()
+    try:
+        run_socket_server()
+    except Exception as e:
+        print(e)

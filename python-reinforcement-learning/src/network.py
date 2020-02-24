@@ -19,6 +19,11 @@ INPUT_SHAPE = (IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH_DIM)
 
 OUTPUT_SHAPE = 3
 
+GAMMA = 0.99
+
+reward_history = []
+
+
 def create_model():
     model = Sequential()
     model.add(Conv2D(16, (3, 3), data_format='channels_last', input_shape=INPUT_SHAPE))
@@ -98,23 +103,23 @@ def predict(image, epsilon = 0):
     return prediction_to_motion(prediction[0])
 
 
-gamma = 0.99
-
 def discount_rewards(r):
     discounted_r = np.zeros_like(r)
     running_add = 0
     for t in reversed(range(len(discounted_r))):
-        running_add =  r[t] + running_add * gamma # belman equation
+        running_add =  r[t] + running_add * GAMMA # belman equation
         discounted_r[t] = running_add
     return discounted_r
 
 
 def discount_n_standardise(r):
     dr = discount_rewards(r)
-    dr_std = max(1, dr.std())
+    reward_history.extend(dr)
+
+    reward_std = max(1, np.array(reward_history).std())
 
     print("Rewards:", dr)
-    dr = (dr - dr.mean()) / dr_std
+    dr = (dr - reward_std.mean()) / reward_std
     print("Discounted rewards:", dr)
     return dr
 
