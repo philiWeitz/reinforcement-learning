@@ -21,22 +21,22 @@ sock.bind(server_address)
 sock.listen(1)
 
 # shows an image every 5 seconds
-show_image = True
 image_show_timeout = time.time() * 1000.0
 
+show_image = False
 show_loss_history_plot = True
 show_reward_sum_history_plot = True
 
-episode_counter = 0
-
 # only impacts the decrease of epsilond througout the training
-MAX_EPISODES = 100
+MAX_EPISODES = 200
+# amount of episodes until we train the network
+BATCH_SIZE = 10
 
 
 # linearly decrese epsilon
 def get_epsilon(episode_counter, max_epsiodes):
-    # always leave at least 10% randomness
-    return max(10, (100 - (episode_counter / max_epsiodes) * 100))
+    # always leave at least 30% randomness
+    return max(30, (100 - (episode_counter / max_epsiodes) * 100))
 
 def show_loss_history(loss_history):
     if show_loss_history_plot:
@@ -74,7 +74,7 @@ def show_received_image(image):
 
 
 def run_socket_server():
-    global episode_counter
+    episode_counter = 0
 
     data_buffer = ""
     
@@ -84,6 +84,10 @@ def run_socket_server():
     reward_record = []
     state_record = []
     action_record = []
+    discounted_reward_record = []
+
+    overall_step_record = np.array([])
+
 
     print('waiting for a connection')
     connection, client_address = sock.accept()
@@ -125,37 +129,53 @@ def run_socket_server():
                         
                         # get the reward
                         isAgentOnTrack =  json_object['isOnTrack']
-                        reward_record.append(1.0 if isAgentOnTrack else -5.0)
+                        reward_record.append(1.0 if isAgentOnTrack else 1.0)
                         
                         # add state and action record
                         state_record.append(gray_scale_image)
                         action_record.append(motion)
 
-                        # episode is over :(
+                        # episode is over
                         if not isAgentOnTrack:
-                            # train and evaluate the model
-                            network.train(state_record, action_record, reward_record)
-                            loss_history.append(network.evaluate(state_record, action_record, reward_record))
+                            step_count = len(reward_record)
 
-                            reward_sum_history.append(sum(reward_record))
-                            state_record = []
-                            action_record = []
+                            if step_count > 2:
+                                reward_sum_history.append(step_count)
+                                discounted_reward = network.discount_rewards(reward_record).tolist()
+                                discounted_reward_record.extend(discounted_reward)
+
+                                overall_step_record = np.append(overall_step_record, len(reward_record))
+                                # increase the episode
+                                episode_counter += 1
+
+                            if step_count > 2 and (episode_counter % BATCH_SIZE) == 0:
+                                # train and evaluate the model
+                                loss = network.train(state_record, action_record, discounted_reward_record)
+                                loss_history.append(loss)
+
+                                print("Episode:", episode_counter)
+                                print("Epsilon:", epsilon)
+
+                                # show reward history
+                                show_reward_sum_history(reward_sum_history)
+                                # show loss function results
+                                show_loss_history(loss_history)
+
+                                state_record = []
+                                action_record = []
+                                discounted_reward_record = []
+
+                            else:
+                                time.sleep(0.5)
+
                             reward_record = []
 
-                            print("Episode:", episode_counter, ", Epsilon:", epsilon)
                             # reset environment
+                            print("---- RESET------------------------------------------------")
                             connection.send("RESET".encode('utf-8'))
-
-                            # increase the episode
-                            episode_counter += 1
-
-                            # show reward history
-                            show_reward_sum_history(reward_sum_history)
-                            # show loss function results
-                            show_loss_history(loss_history)
-
+                           
                     except Exception as e:
-                        print('unable to parse json from data string', e)
+                        print('Error:', e)
             else:
                 break
             

@@ -5,7 +5,8 @@ using UnityEngine;
 [Serializable]
 public class MoveModel
 {
-    private static readonly float AGENT_SPEED = 3.0f;
+    private static readonly float AGENT_SPEED = 6.0f;
+    private static readonly float AGENT_TURN_SPEED = 3.0f;
 
     public string vertical = "";
 
@@ -21,11 +22,11 @@ public class MoveModel
     {
         if (horizontal == "LEFT")
         {
-            return -AGENT_SPEED;
+            return -AGENT_TURN_SPEED;
         }
         if (horizontal == "RIGHT")
         {
-            return AGENT_SPEED;
+            return AGENT_TURN_SPEED;
         }
         else return 0;
     }

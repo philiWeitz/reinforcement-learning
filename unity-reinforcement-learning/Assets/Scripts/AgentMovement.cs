@@ -2,15 +2,15 @@
 
 public class AgentMovement : MonoBehaviour
 {
-    public float speed = 6.0f;
+    public float speed = 12.0f;
+
+    public float rotationSpeed = 180f;
 
     public float gravity = 20.0f;
 
     private Vector3 initialPosition;
 
     private Quaternion initialRotation;
-
-    private Vector3 moveDirection = Vector3.zero;
 
 
     void Start()
@@ -81,6 +81,7 @@ public class AgentMovement : MonoBehaviour
     {
         CharacterController characterController = GetComponent<CharacterController>();
 
+        Vector3 moveDirection = Vector3.zero;
         moveDirection.y -= gravity * Time.deltaTime;
         moveDirection = this.transform.TransformDirection(moveDirection);
         characterController.Move(moveDirection * Time.deltaTime);
@@ -95,18 +96,12 @@ public class AgentMovement : MonoBehaviour
 
         if (characterController.isGrounded && Status.instance.isOnTrack)
         {
-            if (characterController.isGrounded)
-            {
-                // We are grounded, so recalculate move direction directly from axes
-                moveDirection = new Vector3(0.0f, 0.0f, vertical);
-                moveDirection *= speed;
-            }
+            Vector3 rotation = new Vector3(0, horizontal * rotationSpeed * Time.deltaTime, 0);
+            Vector3 move = new Vector3(0, 0, vertical * Time.deltaTime);
+            move = this.transform.TransformDirection(move * speed);
 
-            Vector3 rotation = new Vector3(0, horizontal * 90 * Time.deltaTime, 0);
+            characterController.Move(move);
             this.transform.Rotate(rotation);
-
-            moveDirection = this.transform.TransformDirection(moveDirection);
-            characterController.Move(moveDirection * Time.deltaTime);
         }
         else if(Status.instance.isOnTrack)
         {

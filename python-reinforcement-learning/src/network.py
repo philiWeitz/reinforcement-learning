@@ -16,12 +16,11 @@ IMG_WIDTH = 120
 IMG_DEPTH_DIM = 1
 
 INPUT_SHAPE = (IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH_DIM)
-
 OUTPUT_SHAPE = 3
 
 GAMMA = 0.99
 
-reward_history = []
+max_discount_rewards_mean = 1
 
 
 def create_model():
@@ -31,10 +30,11 @@ def create_model():
     model.add(Conv2D(32, (5, 5), strides=2))
     model.add(MaxPooling2D(pool_size=(3,3), padding='valid'))
     model.add(Flatten())
-    model.add(Dense(120, activation='sigmoid'))
+    model.add(Dense(200, activation='sigmoid'))   
+    model.add(Dense(60, activation='sigmoid'))   
     model.add(Dense(OUTPUT_SHAPE, activation='sigmoid'))
 
-    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.compile(optimizer='adam', loss='categorical_crossentropy')
     return model
 
 def prediction_to_motion(prediction):
@@ -68,24 +68,23 @@ def action_to_vector(action):
 def expand_image_dimension(image):
     return np.expand_dims(image, axis=2)
 
+def train(state_record, action_record, discount_reward_record):
+    global max_discount_rewards_mean
+    print("Max Mean:", max_discount_rewards_mean)
 
-def train(state_record, action_record, reward_record):
-    print('Start training...')
-    discounted_rewards = np.array(discount_n_standardise(reward_record))
+    # standartdize the rewards
+    discount_rewards = np.array(discount_reward_record)
+    max_discount_rewards_mean = max(max_discount_rewards_mean, discount_rewards.mean())
+
+    discount_rewards -= max_discount_rewards_mean
+    discount_rewards /= discount_rewards.std()
+    discount_rewards = discount_rewards.squeeze()
+    print("Discounted Rewards:", discount_rewards);
     
     X = np.array([expand_image_dimension(image) for image in state_record])
     y = np.array([action_to_vector(action) for action in action_record])
-        
-    model.fit(X, y, sample_weight=discounted_rewards, batch_size=512, epochs=1, verbose=0)
-    print('Done')
-
-
-def evaluate(state_record, action_record, reward_record):
-    discounted_rewards = np.array(discount_n_standardise(reward_record))
-    
-    X = np.array([expand_image_dimension(image) for image in state_record])
-    y = np.array([action_to_vector(action) for action in action_record])
-    return model.evaluate(X, y, sample_weight=discounted_rewards, batch_size=512, verbose=0)
+ 
+    return model.train_on_batch([X, discount_reward_record], y)
 
 
 # epsilon of 0 -> no random moves, epsilon of 100 -> 100% random moves
@@ -110,18 +109,6 @@ def discount_rewards(r):
         running_add =  r[t] + running_add * GAMMA # belman equation
         discounted_r[t] = running_add
     return discounted_r
-
-
-def discount_n_standardise(r):
-    dr = discount_rewards(r)
-    reward_history.extend(dr)
-
-    reward_std = max(1, np.array(reward_history).std())
-
-    print("Rewards:", dr)
-    dr = (dr - reward_std.mean()) / reward_std
-    print("Discounted rewards:", dr)
-    return dr
 
 
 model = create_model()
