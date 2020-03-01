@@ -241,7 +241,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   port: 11000
   agentCamera: {fileID: 972160093}
-  repeatEverySec: 0.1
+  repeatEverySec: 0.01
 --- !u!1 &170076733
 GameObject:
   m_ObjectHideFlags: 0
@@ -1034,7 +1034,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e368d8c15267048df914f958a53da95a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSimulationRunning: 1
   isOnTrack: 1
   resetAgent: 0
   networkMoveModel:

@@ -44,6 +44,9 @@ public class AgentMovement : MonoBehaviour
                     moveModel.GetVerticalControllerValue());
 
                 Status.instance.networkMoveModel = new MoveModel();
+
+                // allow sending the next frame
+                Status.instance.shouldSendImage = true;
             }
         }
         else
@@ -65,7 +68,6 @@ public class AgentMovement : MonoBehaviour
 
         Status.instance.isOnTrack = true;
         Status.instance.resetAgent = false;
-        Status.instance.isSimulationRunning = true;
         Status.instance.networkMoveModel = new MoveModel();
     }
 

@@ -2,13 +2,13 @@
 
 public class Status : MonoBehaviour
 {
-    public volatile bool isSimulationRunning = true;
-
     public volatile bool isOnTrack = true;
 
     public volatile bool resetAgent = false;
 
     public volatile MoveModel networkMoveModel;
+
+    public volatile bool shouldSendImage = true;
 
     public static volatile Status instance;
 

@@ -10,9 +10,10 @@ public class PythonConnector : MonoBehaviour
 
     public Camera agentCamera;
 
-    public float repeatEverySec = 0.5f;
+    public float repeatEverySec = 0.1f;
 
     private byte[] _recieveBuffer = new byte[8142];
+    
 
     private Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
@@ -69,6 +70,7 @@ public class PythonConnector : MonoBehaviour
                 Status.instance.networkMoveModel = moveModel;
             }
         }
+
         // start receiving data again
         clientSocket.BeginReceive(_recieveBuffer, 0, _recieveBuffer.Length, SocketFlags.None, new AsyncCallback(ReceiveCallback), null);
     }
@@ -76,7 +78,7 @@ public class PythonConnector : MonoBehaviour
     private void SendData()
     {
         // only send picture when the simmulation is running
-        if (clientSocket.Connected && Status.instance.isSimulationRunning)
+        if (clientSocket.Connected && Status.instance.shouldSendImage)
         {
             Texture2D agentTexture = GetAgentCameraTexture();
 
@@ -92,11 +94,8 @@ public class PythonConnector : MonoBehaviour
                 socketAsyncData.SetBuffer(data, 0, data.Length);
                 clientSocket.SendAsync(socketAsyncData);
 
-                // Stop simulation when the agent is off track
-                if (!Status.instance.isOnTrack)
-                {
-                    Status.instance.isSimulationRunning = false;
-                }
+                // don't send the next frame until the agent reacted to the current one
+                Status.instance.shouldSendImage = false;
             }
         }
     }

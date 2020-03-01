@@ -10,6 +10,7 @@ numpy = "*"
 seaborn = "*"
 keras = "*"
 tensorflow = "*"
+keras-rl2 = "*"
 
 [requires]
 python_version = "3.7"
