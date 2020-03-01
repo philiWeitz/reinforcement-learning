@@ -84,10 +84,10 @@ class Agent:
 
     def predict_move(self, image):
         # TODO: add network prediction here
-        q_values = np.array([0, 0, 1])
+        q_values = self.model.predict(np.array([image]))
 
         # select an action
-        position = self.policy.select_action(q_values=q_values)
+        position = self.policy.select_action(q_values=q_values[0])
         # set the action
         action = np.zeros(OUTPUT_SHAPE)
         action[position] = 1
