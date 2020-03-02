@@ -1,9 +1,8 @@
 import numpy as np
+
 from agent import Agent
 from visualization import Visualization
-
 from rl.memory import SequentialMemory
-from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy
 
 
 def expand_image_dimension(image):
@@ -42,11 +41,9 @@ def motion_to_action(motion):
 
 class Environment:
     def __init__(self):
-        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05, nb_steps=100)
-
         self.init()
-        self.agent = Agent(policy)
-        self.batch_size = 5    
+        self.agent = Agent()
+        self.batch_size = 5
         self.is_terminal_state = False
         self.visualization = Visualization()
 
@@ -59,7 +56,6 @@ class Environment:
     def add_move(self, move_model):
         # environment was not propperly reset -> ignore this frame
         if self.is_terminal_state and not move_model['isOnTrack']:
-            # print("Double!!")
             return False
 
         # get the observation
@@ -91,6 +87,9 @@ class Environment:
             loss_value = self.agent.train(self.memory)
             self.visualization.add_loss_value(loss_value)
             self.visualization.plot_loss_history()
+
+            self.visualization.add_steps_value(sum(self.memory.rewards.data) / self.batch_size)
+            self.visualization.plot_steps_history()
             # reset environment
             self.init()
 

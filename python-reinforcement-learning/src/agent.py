@@ -1,5 +1,4 @@
 import time
-import random
 
 import numpy as np
 import pandas as pd
@@ -8,6 +7,7 @@ import tensorflow as tf
 import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
 
+from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy
 from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxPooling2D
 from tensorflow.keras.models import load_model, Sequential, Model
 
@@ -38,7 +38,7 @@ def get_discounted_rewards(memory):
         discounted_rewards[i] = running_add
 
     # standardize the rewards
-    discounted_rewards -= discounted_rewards.mean()
+    discounted_rewards -= discounted_rewards.mean() 
     discounted_rewards /= discounted_rewards.std()
     discounted_rewards = discounted_rewards.squeeze()
     return discounted_rewards
@@ -46,11 +46,13 @@ def get_discounted_rewards(memory):
 
 class Agent:
 
-    def __init__(self, policy):
+    def __init__(self):
         self.step = 0
         self.training = True
 
         self.create_model()
+                
+        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.3, value_test=.05, nb_steps=100)
         self.policy = policy
         self.policy._set_agent(self)
 
@@ -74,16 +76,18 @@ class Agent:
     def train(self, memory):
         print("Training...")
         discounted_rewards = get_discounted_rewards(memory);
-        print(discounted_rewards)
+        # print(discounted_rewards)
 
         X = np.array(memory.observations.data)
         y = np.array(memory.actions.data)
+
+        # increase the step size
+        self.step += 1
 
         return self.model.train_on_batch([X, discounted_rewards], y)
 
 
     def predict_move(self, image):
-        # TODO: add network prediction here
         q_values = self.model.predict(np.array([image]))
 
         # select an action
@@ -91,6 +95,5 @@ class Agent:
         # set the action
         action = np.zeros(OUTPUT_SHAPE)
         action[position] = 1
-        # increase the step size
-        self.step += 1
+
         return action
