@@ -62,6 +62,10 @@ class Environment:
         colors = move_model['colors']
         gray_scale_image = np.reshape(colors, (50, 120))
         gray_scale_image = np.flip(gray_scale_image, 0)
+
+        # display the image
+        # self.visualization.show_agent_input_image(gray_scale_image)
+
         gray_scale_image = expand_image_dimension(gray_scale_image)
 
         # is terminal state

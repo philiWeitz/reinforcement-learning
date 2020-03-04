@@ -60,14 +60,10 @@ class Agent:
     def create_model(self):
         model = Sequential()
         model.add(Conv2D(16, (3, 3), data_format='channels_last', input_shape=INPUT_SHAPE))
-        model.add(Conv2D(16, (3, 3)))
         model.add(Conv2D(32, (5, 5), strides=2))
         model.add(MaxPooling2D(pool_size=(3,3), padding='valid'))
         model.add(Flatten())
-        model.add(Dense(200, activation='sigmoid'))   
-        model.add(Dense(60, activation='sigmoid'))   
-        model.add(Dense(OUTPUT_SHAPE, activation='sigmoid'))
-
+        model.add(Dense(OUTPUT_SHAPE, activation='linear', kernel_initializer='zeros', bias_initializer='zeros'))
         model.compile(optimizer='adam', loss='categorical_crossentropy')
 
         self.model = model
@@ -75,8 +71,7 @@ class Agent:
 
     def train(self, memory):
         print("Training...")
-        discounted_rewards = get_discounted_rewards(memory);
-        # print(discounted_rewards)
+        discounted_rewards = get_discounted_rewards(memory)
 
         X = np.array(memory.observations.data)
         y = np.array(memory.actions.data)
@@ -84,7 +79,8 @@ class Agent:
         # increase the step size
         self.step += 1
 
-        return self.model.train_on_batch([X, discounted_rewards], y)
+        result = self.model.fit(X, y, sample_weight=discounted_rewards, batch_size=512, epochs=1, verbose=0, shuffle=True)
+        return result.history["loss"][-1]
 
 
     def predict_move(self, image):

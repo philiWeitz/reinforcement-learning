@@ -6,7 +6,6 @@ import socket
 import json
 import sys
 
-import time
 from environment import Environment
 
 # Create a TCP/IP socket
@@ -20,24 +19,7 @@ sock.bind(server_address)
 # Listen for incoming connections
 sock.listen(1)
 
-# shows an image every X seconds
-image_show_timeout = time.time() * 1000.0
-show_image = False
-
 env = Environment()
-
-
-def show_received_image(image):
-    global image_show_timeout
-    now = time.time() * 1000.0
-
-    if (show_image and now > image_show_timeout) == True:
-        plt.figure(0)
-        plt.title('Agent Input Image')
-        plt.imshow(image, cmap='gray', vmin=0, vmax=255)
-        plt.show(block=False)
-        plt.pause(0.001)
-        image_show_timeout = now + (3 * 1000)
 
 
 def run_socket_server():
