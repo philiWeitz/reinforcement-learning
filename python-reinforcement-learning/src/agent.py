@@ -38,10 +38,35 @@ def get_discounted_rewards(memory):
         discounted_rewards[i] = running_add
 
     # standardize the rewards
-    discounted_rewards -= discounted_rewards.mean() 
+    discounted_rewards -= discounted_rewards.mean()
     discounted_rewards /= discounted_rewards.std()
     discounted_rewards = discounted_rewards.squeeze()
     return discounted_rewards
+
+
+def get_adjusted_actions(memory, rewards):
+    actions = np.array(memory.actions.data)
+    actions += abs(actions.min()) # range from 0 to x
+    actions /= actions.max() # range from 0 to 1
+
+    gradients = np.gradient(actions, axis=0)
+
+    for i in range(len(actions)):
+        action = actions[i]
+        reward = rewards[i]
+        gradient = gradients[i]
+        selected_action_idx = np.argmax(action)
+
+        learning_rate = 0.1 if reward > 0 else -0.1
+        action[selected_action_idx] += learning_rate * gradient[selected_action_idx] * reward
+
+        next_idx = (selected_action_idx + 1) % 3
+        action[next_idx] += learning_rate * gradient[next_idx] * reward
+
+        next_idx = (next_idx + 1) % 3
+        action[next_idx] += learning_rate * gradient[next_idx] * reward
+
+    return actions
 
 
 class Agent:
@@ -49,12 +74,7 @@ class Agent:
     def __init__(self):
         self.step = 0
         self.training = True
-
         self.create_model()
-                
-        policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.3, value_test=.05, nb_steps=100)
-        self.policy = policy
-        self.policy._set_agent(self)
 
 
     def create_model(self):
@@ -63,8 +83,9 @@ class Agent:
         model.add(Conv2D(32, (5, 5), strides=2))
         model.add(MaxPooling2D(pool_size=(3,3), padding='valid'))
         model.add(Flatten())
-        model.add(Dense(OUTPUT_SHAPE, activation='linear', kernel_initializer='zeros', bias_initializer='zeros'))
-        model.compile(optimizer='adam', loss='categorical_crossentropy')
+        model.add(Dense(100, activation='linear'))
+        model.add(Dense(OUTPUT_SHAPE, activation='linear'))
+        model.compile(optimizer='adam', loss='mean_squared_error')
 
         self.model = model
 
@@ -72,24 +93,19 @@ class Agent:
     def train(self, memory):
         print("Training...")
         discounted_rewards = get_discounted_rewards(memory)
+        adjusted_actions = get_adjusted_actions(memory, discounted_rewards)
 
         X = np.array(memory.observations.data)
-        y = np.array(memory.actions.data)
+        y = np.array(adjusted_actions)
 
         # increase the step size
         self.step += 1
 
-        result = self.model.fit(X, y, sample_weight=discounted_rewards, batch_size=512, epochs=1, verbose=0, shuffle=True)
+        result = self.model.fit(X, y, batch_size=512, epochs=1, verbose=0, shuffle=True)
         return result.history["loss"][-1]
 
 
     def predict_move(self, image):
-        q_values = self.model.predict(np.array([image]))
-
-        # select an action
-        position = self.policy.select_action(q_values=q_values[0])
-        # set the action
-        action = np.zeros(OUTPUT_SHAPE)
-        action[position] = 1
-
-        return action
+        prediction = self.model.predict(np.array([image]))
+        # prediction is an array of arrays
+        return prediction[0]

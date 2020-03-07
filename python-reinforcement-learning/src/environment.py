@@ -9,8 +9,8 @@ def expand_image_dimension(image):
     return np.expand_dims(image, axis=2)
 
 
-def action_to_motion(prediction):
-    horizontal = np.argmax(prediction)
+def action_to_motion(action):
+    horizontal = np.argmax(action)
 
     if horizontal == 0:
         horizontal = "LEFT"
@@ -18,7 +18,7 @@ def action_to_motion(prediction):
         horizontal = "RIGHT"
     else:
         horizontal = "CENTER"
-    
+
     motion = {}
     motion['vertical'] = "FORWARD"
     motion['horizontal'] = horizontal
@@ -43,7 +43,7 @@ class Environment:
     def __init__(self):
         self.init()
         self.agent = Agent()
-        self.batch_size = 5
+        self.batch_size = 1
         self.is_terminal_state = False
         self.visualization = Visualization()
 
@@ -75,8 +75,11 @@ class Environment:
         # get the next state prediction from network
         prediction = self.agent.predict_move(gray_scale_image)
 
+        # each step gets a reward of 1
+        reward = 1
+
         # lets store the current state
-        self.memory.append(gray_scale_image, prediction, 1, self.is_terminal_state)
+        self.memory.append(gray_scale_image, prediction, reward, self.is_terminal_state)
 
         # update the episode counter
         if self.is_terminal_state:
