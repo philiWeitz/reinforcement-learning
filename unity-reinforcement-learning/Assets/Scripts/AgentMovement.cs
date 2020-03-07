@@ -63,6 +63,12 @@ public class AgentMovement : MonoBehaviour
 
     private void ResetAgent()
     {
+        //// random starting point
+        //RoadPositionModel roadPosition = Status.instance.GetRandomRoadPosition();
+        //this.transform.rotation = roadPosition.rotation;
+        //this.transform.position = roadPosition.position;
+
+        // fixed starting point
         this.transform.rotation = initialRotation;
         this.transform.position = initialPosition;
 

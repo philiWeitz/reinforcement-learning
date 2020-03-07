@@ -12,6 +12,10 @@ public class Status : MonoBehaviour
 
     public static volatile Status instance;
 
+    public GameObject road;
+
+    private Vector3[] vertices;
+
 
     private void Awake()
     {
@@ -24,5 +28,17 @@ public class Status : MonoBehaviour
             Destroy(this.gameObject);
         }
         DontDestroyOnLoad(this.gameObject);
+    }
+
+    public RoadPositionModel GetRandomRoadPosition()
+    {
+        if (vertices == null || vertices.Length <= 0)
+        {
+            Mesh mesh = road.GetComponent<MeshFilter>().mesh;
+            vertices = mesh.vertices;
+        }
+
+        int idx = Random.Range(0, vertices.Length - 1);
+        return new RoadPositionModel(vertices[idx], vertices[idx + 1]);
     }
 }

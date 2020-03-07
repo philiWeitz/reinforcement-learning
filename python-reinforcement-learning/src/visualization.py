@@ -26,7 +26,7 @@ class Visualization:
 
     def plot_loss_history(self):
       plt.figure(0)
-      ax = sns.lineplot(data=self.loss_history)
+      ax = sns.lineplot(data=np.clip(self.loss_history, -10000, 10000))
       ax.set_title('Loss History')
       plt.show(block=False)
       plt.pause(0.001)

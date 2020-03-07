@@ -7,8 +7,7 @@ import tensorflow as tf
 import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
 
-from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy
-from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxPooling2D
+from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxPooling2D, Dropout
 from tensorflow.keras.models import load_model, Sequential, Model
 
 
@@ -72,6 +71,9 @@ def get_adjusted_actions(memory, rewards):
 class Agent:
 
     def __init__(self):
+        # only save the model if the step count is larger than the current max
+        self.max_step_count = 200
+
         self.step = 0
         self.training = True
         self.create_model()
@@ -83,7 +85,9 @@ class Agent:
         model.add(Conv2D(32, (5, 5), strides=2))
         model.add(MaxPooling2D(pool_size=(3,3), padding='valid'))
         model.add(Flatten())
+        model.add(Dropout(0.25))
         model.add(Dense(100, activation='linear'))
+        model.add(Dropout(0.25))
         model.add(Dense(OUTPUT_SHAPE, activation='linear'))
         model.compile(optimizer='adam', loss='mean_squared_error')
 
@@ -91,6 +95,12 @@ class Agent:
 
 
     def train(self, memory):
+        steps_taken = len(memory.actions.data)
+        if (steps_taken > self.max_step_count):
+            print("Saving model...")
+            self.model.save('trained-model.h5')
+            self.max_step_count = steps_taken
+
         print("Training...")
         discounted_rewards = get_discounted_rewards(memory)
         adjusted_actions = get_adjusted_actions(memory, discounted_rewards)
