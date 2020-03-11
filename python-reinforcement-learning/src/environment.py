@@ -76,7 +76,7 @@ class Environment:
         prediction = self.agent.predict_move(gray_scale_image)
 
         # each step gets a reward of 1
-        reward = 1
+        reward = 1 if self.is_terminal_state else 1
 
         # lets store the current state
         self.memory.append(gray_scale_image, prediction, reward, self.is_terminal_state)

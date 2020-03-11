@@ -12,6 +12,8 @@ public class AgentMovement : MonoBehaviour
 
     private Quaternion initialRotation;
 
+    private int notGroundedCounter = 0;
+
 
     void Start()
     {
@@ -101,6 +103,19 @@ public class AgentMovement : MonoBehaviour
         ApplyGravity();
 
         CharacterController characterController = GetComponent<CharacterController>();
+
+        //if (!characterController.isGrounded)
+        //{
+        //    notGroundedCounter += 1;
+        //} else 
+        //{
+        //    notGroundedCounter = 0;
+        //}
+
+        //if (!characterController.isGrounded && notGroundedCounter < 3)
+        //{
+        //    return;
+        //}
 
         if (characterController.isGrounded && Status.instance.isOnTrack)
         {
