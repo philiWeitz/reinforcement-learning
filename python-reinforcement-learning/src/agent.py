@@ -45,8 +45,6 @@ def get_discounted_rewards(memory):
 
 def get_adjusted_actions(memory, rewards):
     actions = np.array(memory.actions.data)
-    actions += abs(actions.min()) # range from 0 to x
-    actions /= actions.max() # range from 0 to 1
 
     gradients = np.gradient(actions, axis=0)
 

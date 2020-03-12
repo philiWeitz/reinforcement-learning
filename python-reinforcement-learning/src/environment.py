@@ -3,10 +3,15 @@ import numpy as np
 from agent import Agent
 from visualization import Visualization
 from rl.memory import SequentialMemory
+from tensorflow.keras.applications.mobilenet import preprocess_input
 
 
 def expand_image_dimension(image):
     return np.expand_dims(image, axis=2)
+
+
+def preprocess_image(image):
+    return preprocess_input(image)
 
 
 def action_to_motion(action):
@@ -67,6 +72,7 @@ class Environment:
         # self.visualization.show_agent_input_image(gray_scale_image)
 
         gray_scale_image = expand_image_dimension(gray_scale_image)
+        gray_scale_image = preprocess_image(gray_scale_image)
 
         # is terminal state
         is_agent_on_track =  move_model['isOnTrack']
