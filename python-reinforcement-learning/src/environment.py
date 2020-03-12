@@ -1,8 +1,9 @@
 import numpy as np
 
 from agent import Agent
+from memory import Memory
 from visualization import Visualization
-from rl.memory import SequentialMemory
+
 from tensorflow.keras.applications.mobilenet import preprocess_input
 
 
@@ -14,12 +15,10 @@ def preprocess_image(image):
     return preprocess_input(image)
 
 
-def action_to_motion(action):
-    horizontal = np.argmax(action)
-
-    if horizontal == 0:
+def action_to_motion(selected_action_idx):
+    if selected_action_idx == 0:
         horizontal = "LEFT"
-    elif horizontal == 1:
+    elif selected_action_idx == 1:
         horizontal = "RIGHT"
     else:
         horizontal = "CENTER"
@@ -54,7 +53,7 @@ class Environment:
 
 
     def init(self):
-        self.memory = SequentialMemory(1000, window_length=1)
+        self.memory = Memory()
         self.current_episode = 0
 
 
@@ -79,13 +78,13 @@ class Environment:
         self.is_terminal_state = not is_agent_on_track
 
         # get the next state prediction from network
-        prediction = self.agent.predict_move(gray_scale_image)
+        prediction, selected_action_idx = self.agent.predict_move(gray_scale_image)
 
         # each step gets a reward of 1
-        reward = 1 if self.is_terminal_state else 1
+        reward = 1
 
         # lets store the current state
-        self.memory.append(gray_scale_image, prediction, reward, self.is_terminal_state)
+        self.memory.append(gray_scale_image, prediction, selected_action_idx, reward, self.is_terminal_state)
 
         # update the episode counter
         if self.is_terminal_state:
@@ -101,11 +100,11 @@ class Environment:
             self.visualization.add_loss_value(loss_value)
             self.visualization.plot_loss_history()
 
-            self.visualization.add_steps_value(sum(self.memory.rewards.data) / self.batch_size)
+            self.visualization.add_steps_value(sum(self.memory.rewards) / self.batch_size)
             self.visualization.plot_steps_history()
             # reset environment
             self.init()
 
 
     def get_predicted_motion(self):
-        return action_to_motion(self.memory.actions.data[-1])
+        return action_to_motion(self.memory.selected_action_idx[-1])

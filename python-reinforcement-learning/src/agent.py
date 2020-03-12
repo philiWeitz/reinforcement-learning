@@ -7,7 +7,8 @@ import tensorflow as tf
 import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
 
-from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxPooling2D, Dropout
+from scipy.special import softmax
+from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxPooling2D, Dropout, BatchNormalization
 from tensorflow.keras.models import load_model, Sequential, Model
 
 
@@ -19,6 +20,7 @@ INPUT_SHAPE = (IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH_DIM)
 OUTPUT_SHAPE = 3
 
 GAMMA = 0.99
+LR = 0.1
 
 
 def expand_image_dimension(image):
@@ -26,14 +28,14 @@ def expand_image_dimension(image):
 
 
 def get_discounted_rewards(memory):
-    discounted_rewards = np.zeros(len(memory.rewards.data))
+    discounted_rewards = np.zeros(len(memory.rewards))
     running_add = 0
 
     for i in reversed(range(len(discounted_rewards))):
-        if memory.terminals.data[i] == True:
-            running_add = memory.rewards.data[i]
+        if memory.terminals[i] == True:
+            running_add = memory.rewards[i]
         else:
-            running_add = memory.rewards.data[i] + running_add * GAMMA # belman equation
+            running_add = memory.rewards[i] + running_add * GAMMA # belman equation
         discounted_rewards[i] = running_add
 
     # standardize the rewards
@@ -44,17 +46,16 @@ def get_discounted_rewards(memory):
 
 
 def get_adjusted_actions(memory, rewards):
-    actions = np.array(memory.actions.data)
-
+    actions = np.array(memory.actions)
     gradients = np.gradient(actions, axis=0)
 
     for i in range(len(actions)):
         action = actions[i]
         reward = rewards[i]
         gradient = gradients[i]
-        selected_action_idx = np.argmax(action)
+        selected_action_idx = memory.selected_action_idx[i]
 
-        learning_rate = 0.1 if reward > 0 else -0.1
+        learning_rate = LR if reward > 0 else (LR * -1)
         action[selected_action_idx] += learning_rate * gradient[selected_action_idx] * reward
 
         next_idx = (selected_action_idx + 1) % 3
@@ -74,7 +75,9 @@ class Agent:
 
         self.step = 0
         self.training = True
+
         self.create_model()
+        # self.model = load_model('trained-model.h5')
 
 
     def create_model(self):
@@ -93,7 +96,7 @@ class Agent:
 
 
     def train(self, memory):
-        steps_taken = len(memory.actions.data)
+        steps_taken = len(memory.actions)
         if (steps_taken > self.max_step_count):
             print("Saving model...")
             self.model.save('trained-model.h5')
@@ -103,7 +106,7 @@ class Agent:
         discounted_rewards = get_discounted_rewards(memory)
         adjusted_actions = get_adjusted_actions(memory, discounted_rewards)
 
-        X = np.array(memory.observations.data)
+        X = np.array(memory.observations)
         y = np.array(adjusted_actions)
 
         # increase the step size
@@ -115,5 +118,11 @@ class Agent:
 
     def predict_move(self, image):
         prediction = self.model.predict(np.array([image]))
+
         # prediction is an array of arrays
-        return prediction[0]
+        # propabilities = prediction[0] + abs(min(prediction[0]))
+        # propabilities = [x / sum(propabilities) for x in propabilities]
+        # predicted_idx = np.random.choice(len(propabilities), p=propabilities)
+
+        predicted_idx = np.argmax(prediction[0])
+        return prediction[0], predicted_idx
