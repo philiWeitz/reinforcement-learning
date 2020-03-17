@@ -1,8 +1,7 @@
 import numpy as np
 
-from agent import Agent
-from memory import Memory
 from visualization import Visualization
+from agent_policy_gradient import AgentPolicyGradient
 
 from tensorflow.keras.applications.mobilenet import preprocess_input
 
@@ -15,96 +14,58 @@ def preprocess_image(image):
     return preprocess_input(image)
 
 
-def action_to_motion(selected_action_idx):
-    if selected_action_idx == 0:
-        horizontal = "LEFT"
-    elif selected_action_idx == 1:
-        horizontal = "RIGHT"
-    else:
-        horizontal = "CENTER"
+def action_to_motion(action):
+    clipped_action = np.clip(action, -1, 1)
 
     motion = {}
-    motion['vertical'] = "FORWARD"
-    motion['horizontal'] = horizontal
+    motion['steering'] = round(float(clipped_action[0]), 3)
+    motion['acceleration'] = 1.0
 
     return motion
 
 
-def motion_to_action(motion):
-    action = [0,0,0]
-
-    if motion['horizontal'] == "LEFT":
-        action[0] = 1.0
-    elif motion['horizontal'] == "RIGHT":
-        action[1] = 1.0
-    else:
-        action[2] = 1.0
-
-    return action
-
-
 class Environment:
     def __init__(self):
-        self.init()
-        self.agent = Agent()
-        self.batch_size = 1
-        self.is_terminal_state = False
+        self.agent = AgentPolicyGradient()
         self.visualization = Visualization()
+        self.is_terminal_state = False
 
 
-    def init(self):
-        self.memory = Memory()
-        self.current_episode = 0
-
-
-    def add_move(self, move_model):
-        # environment was not propperly reset -> ignore this frame
-        if self.is_terminal_state and not move_model['isOnTrack']:
-            return False
+    def add_movement(self, move_model):
+        self.is_terminal_state = move_model['isTerminalState']
 
         # get the observation
         colors = move_model['colors']
         gray_scale_image = np.reshape(colors, (50, 120))
         gray_scale_image = np.flip(gray_scale_image, 0)
 
-        # display the image
+        # show the input image
         # self.visualization.show_agent_input_image(gray_scale_image)
 
         gray_scale_image = expand_image_dimension(gray_scale_image)
         gray_scale_image = preprocess_image(gray_scale_image)
 
-        # is terminal state
-        is_agent_on_track =  move_model['isOnTrack']
-        self.is_terminal_state = not is_agent_on_track
+        # predict action and store current observation
+        action = self.agent.choose_action(gray_scale_image)
 
-        # get the next state prediction from network
-        prediction, selected_action_idx = self.agent.predict_move(gray_scale_image)
-
-        # each step gets a reward of 1
-        reward = 1
-
-        # lets store the current state
-        self.memory.append(gray_scale_image, prediction, selected_action_idx, reward, self.is_terminal_state)
-
-        # update the episode counter
-        if self.is_terminal_state:
-            self.current_episode += 1
-
-        return True
+        reward = 1 if action[0] > -0.1 and action[0] < 0.1 else 0.4
+        reward = reward if move_model['isOnTrack'] else reward * -1
+        
+        self.agent.store_transaction(gray_scale_image, action, reward)
 
 
     def train_model_on_batch(self):
-        # only train if batch size is reached
-        if self.current_episode >= self.batch_size:
-            loss_value = self.agent.train(self.memory)
-            self.visualization.add_loss_value(loss_value)
-            self.visualization.plot_loss_history()
+        loss_value = self.agent.learn()
+        step_count = self.agent.get_steps_count()
 
-            self.visualization.add_steps_value(sum(self.memory.rewards) / self.batch_size)
-            self.visualization.plot_steps_history()
-            # reset environment
-            self.init()
+        # self.visualization.add_loss_value(loss_value)
+        # self.visualization.plot_loss_history()
+
+        # self.visualization.add_steps_value(step_count)
+        # self.visualization.plot_steps_history()
+
+        self.agent.reset()
 
 
     def get_predicted_motion(self):
-        return action_to_motion(self.memory.selected_action_idx[-1])
+        return action_to_motion(self.agent.get_current_action())

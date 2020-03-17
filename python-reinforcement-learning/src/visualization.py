@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 
-AGENT_IMAGE_TIMEOUT_SEC = 3 * 1000
+AGENT_IMAGE_TIMEOUT_SEC = 1 * 1000
 
 
 class Visualization:
