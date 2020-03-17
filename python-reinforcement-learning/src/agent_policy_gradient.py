@@ -1,7 +1,7 @@
 import numpy as np
 import keras.backend as K
 
-import tensorflow as tf
+# import tensorflow as tf
 # tf.config.experimental_run_functions_eagerly(True)
 
 from tensorflow.keras.optimizers import Adam
@@ -10,7 +10,9 @@ from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxP
 
 # Taken from https://www.youtube.com/watch?v=IS0V8z8HXrM
 
-LR = 0.1
+GAMMA = 0.99
+
+LR = 0.01
 OPTIMIZER_LR = 0.00001
 
 NR_OF_ACTIONS = 1
@@ -38,17 +40,12 @@ class AgentPolicyGradient():
         x = MaxPooling2D(pool_size=(3,3), padding='valid')(x)
         x = Flatten()(x)
 
-        x = Dense(1024, activation='relu')(x)
-        x = Dense(256, activation='relu')(x)
+        x = Dense(1024, activation='linear')(x)
+        x = Dense(256, activation='linear')(x)
         props = Dense(NR_OF_ACTIONS, activation='linear')(x)
 
-        def custom_loss_function(y_true, y_pred):
-            out = K.clip(y_pred, 1e-8, 1-1e-8)
-            log_lik = y_true * K.log(out)
-            return K.sum(-log_lik)
-
         policy = Model(inputs=[input], outputs=[props])
-        policy.compile(optimizer=Adam(lr=OPTIMIZER_LR), loss=custom_loss_function)
+        policy.compile(optimizer='adam', loss='mean_squared_error')
 
         predict = Model(inputs=[input], outputs=[props])
         return policy, predict
@@ -65,43 +62,46 @@ class AgentPolicyGradient():
         self.reward_memory.append(reward)
 
 
+    def get_discounted_rewards(self):
+        discounted_rewards = np.zeros(len(self.reward_memory))
+        running_add = 0
+
+        for i in reversed(range(len(discounted_rewards))):
+            running_add = self.reward_memory[i] + running_add * GAMMA # belman equation
+            discounted_rewards[i] = running_add
+
+        # standardize the rewards
+        discounted_rewards -= discounted_rewards.mean()
+        discounted_rewards /= discounted_rewards.std()
+        discounted_rewards = discounted_rewards.squeeze()
+        return discounted_rewards
+
+
     def learn(self):
         state_memory = np.array(self.state_memory)
         action_memory = np.array(self.action_memory)
-        reward_memory = np.array(self.reward_memory)
+
+        if (len(action_memory) < 2):
+            print("Invalid terminal state")
+            return 0
 
         print("Observations for training:", len(state_memory))
         actions = np.clip(action_memory, -1, 1)
 
         # discount the rewards
-        G = np.zeros_like(reward_memory)
-        for t in range(len(reward_memory)):
-            G_sum = 0
-            discount = 1
-
-            for k in range(t, len(reward_memory)):
-                G_sum += reward_memory[k] * discount
-
-            G[t] = G_sum
-
-        mean = np.mean(G)
-        std = np.std(G) if np.std(G) > 0 else 1
-        rewards = (G-mean) / std
-
-        # calculate new actions
-        gradients = np.gradient(actions, axis=0)
-        adjusted_actions = actions.copy()
-
+        discounted_rewards = self.get_discounted_rewards()
+        action_updates = np.zeros_like(actions)
+       
         for i in range(len(actions)):
-            action = adjusted_actions[i]
-            reward = rewards[i]
-            gradient = gradients[i]
+            reward = discounted_rewards[i]
 
-            # learning_rate = LR if reward > 0 else (LR * -1)
-            action[0] += LR * gradient[0] * reward
+            if (reward < 0):
+                noise = np.random.randn()
+                action_updates[i] = LR * reward + noise * LR
 
+        # print(action_updates)
         X = np.array(state_memory)
-        y = np.array(adjusted_actions)
+        y = np.array(actions + action_updates)
 
         result = self.policy.fit(X, y, batch_size=512, epochs=1, verbose=0, shuffle=True)
         return result.history["loss"][-1]

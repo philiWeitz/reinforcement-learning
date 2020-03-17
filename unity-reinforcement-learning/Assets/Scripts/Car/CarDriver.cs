@@ -61,7 +61,7 @@ public class CarDriver : MonoBehaviour
         }
         else if (!IsInvoking())
         {
-            Debug.Log("Off track...");
+            //Debug.Log("Off track...");
             Invoke("SetTerminalStateReached", Environment.instance.timeOffTrackBeforeTerminalInSec);
         }
     }
@@ -143,7 +143,7 @@ public class CarDriver : MonoBehaviour
     {
         if (!Environment.instance.isOnTrack)
         {
-            Debug.Log("Terminal state reached");
+            //Debug.Log("Terminal state reached");
             Environment.instance.isTerminalState = true;
         }
     }
