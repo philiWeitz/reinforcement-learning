@@ -10,6 +10,8 @@ from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxP
 
 # Taken from https://www.youtube.com/watch?v=IS0V8z8HXrM
 
+LR = 0.1
+OPTIMIZER_LR = 0.00001
 
 NR_OF_ACTIONS = 1
 
@@ -17,7 +19,6 @@ class AgentPolicyGradient():
     def __init__(self):
         self.GAMMA=0.99
         self.G = 0
-        self.lr = 0.0001
         self.policy, self.predict = self.build_policy_network()
         self.reset()
 
@@ -30,8 +31,7 @@ class AgentPolicyGradient():
 
     def build_policy_network(self):
         input = Input(shape=(50, 120, 1), name='img_in')
-        advantages = Input(shape=[1])
-        
+               
         x = input
         x = Conv2D(16, (3, 3), data_format='channels_last')(x)
         x = Conv2D(32, (5, 5), strides=2)(x)
@@ -45,10 +45,10 @@ class AgentPolicyGradient():
         def custom_loss_function(y_true, y_pred):
             out = K.clip(y_pred, 1e-8, 1-1e-8)
             log_lik = y_true * K.log(out)
-            return K.sum(-log_lik * advantages)
+            return K.sum(-log_lik)
 
-        policy = Model(inputs=[input, advantages], outputs=[props])
-        policy.compile(optimizer=Adam(lr=self.lr), loss=custom_loss_function)
+        policy = Model(inputs=[input], outputs=[props])
+        policy.compile(optimizer=Adam(lr=OPTIMIZER_LR), loss=custom_loss_function)
 
         predict = Model(inputs=[input], outputs=[props])
         return policy, predict
@@ -73,6 +73,7 @@ class AgentPolicyGradient():
         print("Observations for training:", len(state_memory))
         actions = np.clip(action_memory, -1, 1)
 
+        # discount the rewards
         G = np.zeros_like(reward_memory)
         for t in range(len(reward_memory)):
             G_sum = 0
@@ -85,10 +86,25 @@ class AgentPolicyGradient():
 
         mean = np.mean(G)
         std = np.std(G) if np.std(G) > 0 else 1
-        self.G = (G-mean) / std
+        rewards = (G-mean) / std
 
-        cost = self.policy.train_on_batch([state_memory, self.G], actions)
-        return cost
+        # calculate new actions
+        gradients = np.gradient(actions, axis=0)
+        adjusted_actions = actions.copy()
+
+        for i in range(len(actions)):
+            action = adjusted_actions[i]
+            reward = rewards[i]
+            gradient = gradients[i]
+
+            # learning_rate = LR if reward > 0 else (LR * -1)
+            action[0] += LR * gradient[0] * reward
+
+        X = np.array(state_memory)
+        y = np.array(adjusted_actions)
+
+        result = self.policy.fit(X, y, batch_size=512, epochs=1, verbose=0, shuffle=True)
+        return result.history["loss"][-1]
 
 
     def get_steps_count(self):

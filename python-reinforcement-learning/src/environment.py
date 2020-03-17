@@ -48,8 +48,9 @@ class Environment:
         # predict action and store current observation
         action = self.agent.choose_action(gray_scale_image)
 
-        reward = 1 if action[0] > -0.1 and action[0] < 0.1 else 0.4
-        reward = reward if move_model['isOnTrack'] else reward * -1
+        # reward = 1 if action[0] > -0.1 and action[0] < 0.1 else 0.4
+        reward = 0.5 if move_model['isOnTrack'] else -1
+        reward = -10 if self.is_terminal_state else reward
         
         self.agent.store_transaction(gray_scale_image, action, reward)
 
