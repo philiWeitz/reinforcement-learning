@@ -26,7 +26,8 @@ class Visualization:
 
     def plot_loss_history(self):
       plt.figure(0)
-      ax = sns.lineplot(data=np.clip(self.loss_history, -10000, 10000))
+      plt.cla()
+      ax = sns.lineplot(data=self.loss_history[-50:])
       ax.set_title('Loss History')
       plt.show(block=False)
       plt.pause(0.001)
@@ -39,12 +40,22 @@ class Visualization:
       plt.show(block=False)
       plt.pause(0.001)
 
+
+    def plot_steering(self, actions):
+      data = np.array(actions).flatten()
+      plt.figure(2)
+      plt.cla()
+      ax = sns.lineplot(data=data)
+      ax.set_title('Steering')
+      plt.show(block=False)
+      plt.pause(0.001)
+
     
     def show_agent_input_image(self, image):
       now = time.time() * 1000.0
 
       if now > self.image_show_timeout:
-        plt.figure(2)
+        plt.figure(3)
         plt.title('Agent Input Image')
         plt.imshow(image, cmap='gray', vmin=0, vmax=255)
         plt.show(block=False)

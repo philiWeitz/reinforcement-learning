@@ -40,12 +40,12 @@ class AgentPolicyGradient():
         x = MaxPooling2D(pool_size=(3,3), padding='valid')(x)
         x = Flatten()(x)
 
-        x = Dense(1024, activation='linear')(x)
-        x = Dense(256, activation='linear')(x)
+        x = Dense(512, activation='linear')(x)
+        # x = Dense(128, activation='linear')(x)
         props = Dense(NR_OF_ACTIONS, activation='linear')(x)
 
         policy = Model(inputs=[input], outputs=[props])
-        policy.compile(optimizer='adam', loss='mean_squared_error')
+        policy.compile(optimizer='adam', loss='mean_absolute_percentage_error')
 
         predict = Model(inputs=[input], outputs=[props])
         return policy, predict
@@ -86,7 +86,7 @@ class AgentPolicyGradient():
             return 0
 
         print("Observations for training:", len(state_memory))
-        actions = np.clip(action_memory, -1, 1)
+        actions = np.clip(action_memory, -0.8, 0.8)
 
         # discount the rewards
         discounted_rewards = self.get_discounted_rewards()
@@ -96,10 +96,11 @@ class AgentPolicyGradient():
             reward = discounted_rewards[i]
 
             if (reward < 0):
-                noise = np.random.randn()
-                action_updates[i] = LR * reward + noise * LR
+                action_updates[i] = LR * reward
 
-        # print(action_updates)
+        # put a bit of noise to the updates
+        action_updates = [ x + x * np.random.randn() for x in action_updates]
+
         X = np.array(state_memory)
         y = np.array(actions + action_updates)
 
@@ -108,7 +109,7 @@ class AgentPolicyGradient():
 
 
     def get_steps_count(self):
-        return sum(self.action_memory)
+        return len(self.action_memory)
 
 
     def get_current_action(self):

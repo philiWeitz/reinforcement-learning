@@ -47,7 +47,7 @@ class Environment:
 
         # predict action and store current observation
         action = self.agent.choose_action(gray_scale_image)
-        reward = 0 if move_model['isOnTrack'] else -0.1
+        reward = 0.05 if move_model['isOnTrack'] else -0.1
         
         self.agent.store_transaction(gray_scale_image, action, reward)
 
@@ -56,6 +56,7 @@ class Environment:
         loss_value = self.agent.learn()
         step_count = self.agent.get_steps_count()
 
+        # self.visualization.plot_steering(self.agent.action_memory)
         # self.visualization.add_loss_value(loss_value)
         # self.visualization.plot_loss_history()
 

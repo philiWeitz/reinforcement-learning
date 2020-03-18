@@ -819,7 +819,7 @@ MonoBehaviour:
     steering: 0
     acceleration: 0
   gameSpeed: 4
-  timeOffTrackBeforeTerminalInSec: 0.5
+  timeOffTrackBeforeTerminalInSec: 0.3
 --- !u!4 &990394815
 Transform:
   m_ObjectHideFlags: 0
