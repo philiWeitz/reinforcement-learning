@@ -9,12 +9,15 @@ public class FrameModel
 
     public bool isTerminalState;
 
+    public bool isFinishReached;
+
     public uint[] colors;
 
-    public FrameModel(bool isOnTrack, bool isTerminalState, Color[] colors)
+    public FrameModel(bool isOnTrack, bool isTerminalState, bool isFinishReached, Color[] colors)
     {
         this.isOnTrack = isOnTrack;
         this.isTerminalState = isTerminalState;
+        this.isFinishReached = isFinishReached;
 
         this.colors = new uint[colors.Length];
 

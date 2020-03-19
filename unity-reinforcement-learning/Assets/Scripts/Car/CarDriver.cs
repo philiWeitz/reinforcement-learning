@@ -33,13 +33,19 @@ public class CarDriver : MonoBehaviour
         }
 
         CheckForOffTrack();
+        CheckForFinishLine();
 
-        // use either remote or user input
-        if (Input.anyKey) { 
-            Drive(MoveModel.FromInput()); 
-        }
-        else {
-            Drive(Environment.instance.networkMoveModel);
+        if (!Environment.instance.isTerminalState)
+        {
+            // use either remote or user input
+            if (Input.anyKey)
+            {
+                Drive(MoveModel.FromInput());
+            }
+            else
+            {
+                Drive(Environment.instance.networkMoveModel);
+            }
         }
     }
 
@@ -63,6 +69,23 @@ public class CarDriver : MonoBehaviour
         {
             //Debug.Log("Off track...");
             Invoke("SetTerminalStateReached", Environment.instance.timeOffTrackBeforeTerminalInSec);
+        }
+    }
+
+    private void CheckForFinishLine()
+    {
+        if (Environment.instance.finishLine)
+        {
+            foreach (AxleInfo info in axleInfos)
+            {
+                info.leftWheelCollider.GetGroundHit(out WheelHit hit);
+                if (hit.collider != null && hit.collider.name == Environment.instance.finishLine.name)
+                {
+                    Environment.instance.isTerminalState = true;
+                    Environment.instance.isFinishReached = true;
+                    return;
+                }
+            }
         }
     }
 
@@ -137,6 +160,8 @@ public class CarDriver : MonoBehaviour
         Environment.instance.isOnTrack = true;
         Environment.instance.isTerminalState = false;
         Environment.instance.resetEnvironment = false;
+        Environment.instance.isFinishReached = false;
+        Environment.instance.networkMoveModel = new MoveModel();
     }
 
     private void SetTerminalStateReached()

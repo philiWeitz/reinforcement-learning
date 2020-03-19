@@ -96,7 +96,7 @@ public class SocketConnector : MonoBehaviour
             {
                 Color[] colors = agentTexture.GetPixels();
                 FrameModel frame = new FrameModel(Environment.instance.isOnTrack,
-                    Environment.instance.isTerminalState, colors);
+                    Environment.instance.isTerminalState, Environment.instance.isFinishReached, colors);
 
                 byte[] data = frame.ToJsonBytes();
                 Destroy(agentTexture);
@@ -108,6 +108,12 @@ public class SocketConnector : MonoBehaviour
                 // wait until the data is read
                 sendNextImage = false;
             }
+        }
+        else if (clientSocket.Connected && clientSocket.Poll(100, SelectMode.SelectRead)) {
+            Debug.Log("Socket connection was closed unexpectedly. Reseting socket...");
+            clientSocket.Dispose();
+            clientSocket = null;
+            Environment.instance.resetEnvironment = true;
         }
     }
 

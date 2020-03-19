@@ -3,6 +3,7 @@
 public class Environment : MonoBehaviour
 {
     public volatile bool isOnTrack = true;
+    public volatile bool isFinishReached = false;
     public volatile bool isTerminalState = false;
     public volatile bool resetEnvironment = false;
     public volatile MoveModel networkMoveModel = new MoveModel();
@@ -10,6 +11,7 @@ public class Environment : MonoBehaviour
     public static Environment instance;
     public volatile float gameSpeed = 1.0f;
     public volatile float timeOffTrackBeforeTerminalInSec = 2.0f;
+    public volatile GameObject finishLine;
 
 
     void FixedUpdate()
