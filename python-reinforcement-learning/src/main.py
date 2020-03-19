@@ -61,7 +61,6 @@ def run_socket_server():
                             motion = env.get_predicted_motion()
                             connection.send(json.dumps(motion).encode('utf-8'))
 
-
                     except Exception as e:
                         print('Error:', e)
             else:

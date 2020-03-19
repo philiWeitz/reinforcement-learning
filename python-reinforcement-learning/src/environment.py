@@ -1,7 +1,10 @@
 import numpy as np
 
 from visualization import Visualization
-from agent_policy_gradient import AgentPolicyGradient
+
+# from agent_policy_gradient import AgentPolicyGradient
+from agent_policy_gradient_multi_frame import AgentPolicyGradient
+# from agent_policy_gradient_relu import AgentPolicyGradient
 
 from tensorflow.keras.applications.mobilenet import preprocess_input
 
@@ -15,10 +18,10 @@ def preprocess_image(image):
 
 
 def action_to_motion(action):
-    clipped_action = np.clip(action, -1, 1)
+    clipped_steering = np.clip(action[0], -1, 1)
 
     motion = {}
-    motion['steering'] = round(float(clipped_action[0]), 3)
+    motion['steering'] = round(float(clipped_steering), 3)
     motion['acceleration'] = 1.0
 
     return motion
@@ -33,12 +36,14 @@ class Environment:
 
     def add_movement(self, move_model):
         self.is_terminal_state = move_model['isTerminalState']
+        self.is_finish_reached = move_model['isFinishReached']
 
         # get the observation
         colors = move_model['colors']
         gray_scale_image = np.reshape(colors, (50, 120))
         gray_scale_image = np.flip(gray_scale_image, 0)
-
+        self.visualization.add_image(gray_scale_image)
+        
         # show the input image
         # self.visualization.show_agent_input_image(gray_scale_image)
 
@@ -47,22 +52,28 @@ class Environment:
 
         # predict action and store current observation
         action = self.agent.choose_action(gray_scale_image)
-        reward = 0.05 if move_model['isOnTrack'] else -0.1
+        reward = 0 if move_model['isOnTrack'] else -0.1
         
         self.agent.store_transaction(gray_scale_image, action, reward)
 
 
     def train_model_on_batch(self):
-        loss_value = self.agent.learn()
+        loss_value = self.agent.learn(self.is_finish_reached)
         step_count = self.agent.get_steps_count()
 
+        # write video to file if finish is reached
+        if self.is_finish_reached:
+            self.visualization.frames_to_file()
+
         # self.visualization.plot_steering(self.agent.action_memory)
-        # self.visualization.add_loss_value(loss_value)
-        # self.visualization.plot_loss_history()
+
+        self.visualization.add_loss_value(loss_value)
+        self.visualization.plot_loss_history()
 
         # self.visualization.add_steps_value(step_count)
         # self.visualization.plot_steps_history()
 
+        self.visualization.reset_image_buffer()
         self.agent.reset()
 
 
