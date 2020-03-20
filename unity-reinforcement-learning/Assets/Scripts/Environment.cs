@@ -12,6 +12,7 @@ public class Environment : MonoBehaviour
     public volatile float gameSpeed = 1.0f;
     public volatile float timeOffTrackBeforeTerminalInSec = 2.0f;
     public volatile GameObject finishLine;
+    public volatile GameObject trackMeshHolder;
 
 
     void FixedUpdate()

@@ -51,24 +51,27 @@ public class CarDriver : MonoBehaviour
 
     private void CheckForOffTrack()
     {
-        bool isOnTrack = false;
+        if (Environment.instance.trackMeshHolder)
+        {
+            bool isOnTrack = false;
 
-        // check that car is on track
-        foreach (AxleInfo info in axleInfos)
-        {
-            info.leftWheelCollider.GetGroundHit(out WheelHit hit);
-            isOnTrack |= hit.collider == null || hit.collider.name == "Road Mesh Holder";
-        }
-        Environment.instance.isOnTrack = isOnTrack;
+            // check that car is on track
+            foreach (AxleInfo info in axleInfos)
+            {
+                info.leftWheelCollider.GetGroundHit(out WheelHit hit);
+                isOnTrack |= hit.collider == null || hit.collider.name == Environment.instance.trackMeshHolder.name;
+            }
+            Environment.instance.isOnTrack = isOnTrack;
 
-        if (isOnTrack)
-        {
-            CancelInvoke();
-        }
-        else if (!IsInvoking())
-        {
-            //Debug.Log("Off track...");
-            Invoke("SetTerminalStateReached", Environment.instance.timeOffTrackBeforeTerminalInSec);
+            if (isOnTrack)
+            {
+                CancelInvoke();
+            }
+            else if (!IsInvoking())
+            {
+                //Debug.Log("Off track...");
+                Invoke("SetTerminalStateReached", Environment.instance.timeOffTrackBeforeTerminalInSec);
+            }
         }
     }
 

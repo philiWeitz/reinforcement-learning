@@ -55,6 +55,7 @@ public class SocketConnector : MonoBehaviour
         catch (SocketException) {
             clientSocket.Dispose();
             clientSocket = null;
+            Reset();
         }
     }
 
@@ -113,6 +114,7 @@ public class SocketConnector : MonoBehaviour
             Debug.Log("Socket connection was closed unexpectedly. Reseting socket...");
             clientSocket.Dispose();
             clientSocket = null;
+            sendNextImage = true;
             Environment.instance.resetEnvironment = true;
         }
     }
