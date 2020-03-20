@@ -40,17 +40,31 @@ for index, row in data.iterrows():
 
 fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
 out = cv2.VideoWriter('test-video.avi', fourcc, VIDEO_FPS, (120, 50), False)
-      
+
+angle_predictions = [] 
+
+# make the predictions for each frame
 for frame_idx in range(len(image_frames)):
-    frame = np.array(image_frames[frame_idx], dtype=np.uint8)
     frame_buffer_for_prediction = get_frame_buffer(X, frame_idx)
-    
     frame_buffer_for_prediction = np.array(frame_buffer_for_prediction)[np.newaxis, :]
     prediction = model.predict(frame_buffer_for_prediction)
 
-    # -2.0 shouldn't be here!!!!!!!!!
-    angle = prediction[0][0] - 2.0
-    angle_offset = min(110, max(10, int(60 + (angle * 100))))
+    angle_predictions.append(prediction[0][0])
+  
+angle_predictions = np.array(angle_predictions)
+print('Angle mean value:', angle_predictions.mean(), 'std:', angle_predictions.std())
+
+# adjust the angle mean to be 0
+angle_predictions = angle_predictions - angle_predictions.mean()
+# scale the angle predictiions
+angle_predictions /= angle_predictions.std() 
+angle_predictions *= 60
+
+# create the video
+for frame_idx in range(len(image_frames)):
+    frame = image_frames[frame_idx]
+    angle = angle_predictions[frame_idx]
+    angle_offset = min(110, max(10, int(60 + angle)))
 
     for a in range(10):
         frame[a][60][0] = 0
@@ -63,6 +77,5 @@ for frame_idx in range(len(image_frames)):
 
     out.write(frame)
 
-# write vide    
 out.release()
 
