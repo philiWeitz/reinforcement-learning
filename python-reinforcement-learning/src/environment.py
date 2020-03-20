@@ -58,17 +58,20 @@ class Environment:
 
 
     def train_model_on_batch(self):
+        # if we reached the goal -> current model is already really good (save before retraining)
+        if self.is_finish_reached:
+            self.agent.save_prediction_model()
+
         loss_value = self.agent.learn(self.is_finish_reached)
-        step_count = self.agent.get_steps_count()
+        self.visualization.add_loss_value(loss_value)
+        self.visualization.plot_loss_history()
 
         # write video to file if finish is reached
         if self.is_finish_reached:
             self.visualization.frames_to_file()
 
+        # step_count = self.agent.get_steps_count()
         # self.visualization.plot_steering(self.agent.action_memory)
-
-        self.visualization.add_loss_value(loss_value)
-        self.visualization.plot_loss_history()
 
         # self.visualization.add_steps_value(step_count)
         # self.visualization.plot_steps_history()
