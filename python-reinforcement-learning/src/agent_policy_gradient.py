@@ -1,132 +1,116 @@
 import numpy as np
 import keras.backend as K
 
+# import tensorflow as tf
+# tf.config.experimental_run_functions_eagerly(True)
+
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model, Sequential, Model
 from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxPooling2D, Dropout, BatchNormalization
 
 # Taken from https://www.youtube.com/watch?v=IS0V8z8HXrM
 
-IMG_HEIGHT = 50
-IMG_WIDTH = 120
-IMG_DEPTH_DIM = 1
+GAMMA = 0.99
 
-INPUT_SHAPE = (IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH_DIM)
-OUTPUT_SHAPE = 3
-NR_OF_ACTIONS = OUTPUT_SHAPE
+LR = 0.01
+OPTIMIZER_LR = 0.00001
 
-
-def get_terminal_index_of_longest_path(terminals):
-    indexs = np.where(terminals == True)[0] + 1
-    result = np.split(terminals, indexs)
-
-    path_length = [len(x) for x in result]
-    longest_path_idx = np.argmax(path_length)
-
-    start_idx = sum(path_length[:longest_path_idx])
-    end_idx = sum(path_length[:longest_path_idx+1]) - 1
-    
-    return start_idx, end_idx
-
+NR_OF_ACTIONS = 1
 
 class AgentPolicyGradient():
     def __init__(self):
         self.GAMMA=0.99
         self.G = 0
-        self.lr = 0.0001
         self.policy, self.predict = self.build_policy_network()
+        self.reset()
+
+
+    def reset(self):
+        self.state_memory = []
+        self.action_memory = []
+        self.reward_memory = []
 
 
     def build_policy_network(self):
         input = Input(shape=(50, 120, 1), name='img_in')
-        advantages = Input(shape=[1])
-        
+               
         x = input
         x = Conv2D(16, (3, 3), data_format='channels_last')(x)
         x = Conv2D(32, (5, 5), strides=2)(x)
         x = MaxPooling2D(pool_size=(3,3), padding='valid')(x)
         x = Flatten()(x)
-        x = Dense(1024, activation='relu')(x)
-        x = Dense(100, activation='relu')(x)
-        props = Dense(OUTPUT_SHAPE, activation='softmax')(x)
 
-        def custom_loss_function(y_true, y_pred):
-            out = K.clip(y_pred, 1e-8, 1-1e-8)
-            log_lik = y_true * K.log(out)
-            return K.sum(-log_lik * advantages)
+        x = Dense(512, activation='linear')(x)
+        # x = Dense(128, activation='linear')(x)
+        props = Dense(NR_OF_ACTIONS, activation='linear')(x)
 
-        policy = Model(inputs=[input, advantages], outputs=[props])
-        policy.compile(optimizer=Adam(lr=self.lr), loss=custom_loss_function)
+        policy = Model(inputs=[input], outputs=[props])
+        policy.compile(optimizer='adam', loss='mean_absolute_percentage_error')
 
         predict = Model(inputs=[input], outputs=[props])
         return policy, predict
 
     
-    def predict_move(self, observation):
+    def choose_action(self, observation):
         state = observation[np.newaxis, :]
-        propabilities = self.predict.predict(state)[0]
-        # print(propabilities)
-        action = np.random.choice(NR_OF_ACTIONS, p=propabilities)
-        # action = np.argmax(propabilities)
-        return propabilities, action
+        return self.predict.predict(state)[0]
 
 
-    def train(self, memory):
-        state_memory = np.array(memory.observations)
-        state_memory_mirrowed = np.array(memory.observations_mirrowed)
-        action_memory = np.array(memory.actions)
-        reward_memory = np.array(memory.rewards)
-        terminals = np.array(memory.terminals)
-        selected_idxs = memory.selected_action_idx
+    def store_transaction(self, observation, action, reward):
+        self.state_memory.append(observation)
+        self.action_memory.append(action)
+        self.reward_memory.append(reward)
 
-        # only keep the longest route for training
-        start_idx, end_idx = get_terminal_index_of_longest_path(terminals)
-        state_memory = state_memory[start_idx:end_idx+1]
-        state_memory_mirrowed = state_memory_mirrowed[start_idx:end_idx+1]
-        action_memory = action_memory[start_idx:end_idx+1]
-        reward_memory = reward_memory[start_idx:end_idx+1]
-        terminals = terminals[start_idx:end_idx+1]
-        selected_idxs = selected_idxs[start_idx:end_idx+1]
 
-        # # add an extra reward to the longest route
-        # start_idx, end_idx = get_terminal_index_of_longest_path(terminals)
-        # reward_memory[end_idx] = 10
+    def get_discounted_rewards(self):
+        discounted_rewards = np.zeros(len(self.reward_memory))
+        running_add = 0
 
-        actions = np.zeros([len(action_memory), NR_OF_ACTIONS])
-        # one hot encoding
+        for i in reversed(range(len(discounted_rewards))):
+            running_add = self.reward_memory[i] + running_add * GAMMA # belman equation
+            discounted_rewards[i] = running_add
+
+        # standardize the rewards
+        discounted_rewards -= discounted_rewards.mean()
+        discounted_rewards /= discounted_rewards.std()
+        discounted_rewards = discounted_rewards.squeeze()
+        return discounted_rewards
+
+
+    def learn(self):
+        state_memory = np.array(self.state_memory)
+        action_memory = np.array(self.action_memory)
+
+        if (len(action_memory) < 2):
+            print("Invalid terminal state")
+            return 0
+
+        print("Observations for training:", len(state_memory))
+        actions = np.clip(action_memory, -0.8, 0.8)
+
+        # discount the rewards
+        discounted_rewards = self.get_discounted_rewards()
+        action_updates = np.zeros_like(actions)
+       
         for i in range(len(actions)):
-            selected_idx_for_action = selected_idxs[i]
-            actions[i][selected_idx_for_action] = 1.0
+            reward = discounted_rewards[i]
 
-        running_add = 0.0
-        G = np.zeros_like(reward_memory, dtype='float')
+            if (reward < 0):
+                action_updates[i] = LR * reward
 
-        for i in reversed(range(len(reward_memory))):
-            if terminals[i] == True:
-                running_add = reward_memory[i]
-            else:
-                # belman equation
-                running_add = reward_memory[i] + running_add * self.GAMMA
-            G[i] = running_add
+        # put a bit of noise to the updates
+        action_updates = [ x + x * np.random.randn() for x in action_updates]
 
-        mean = np.mean(G)
-        std = np.std(G) if np.std(G) > 0 else 1
-        G = (G-mean) / std
+        X = np.array(state_memory)
+        y = np.array(actions + action_updates)
 
-        # TODO: is this worth it?
-        # G += 0.6
+        result = self.policy.fit(X, y, batch_size=512, epochs=1, verbose=0, shuffle=True)
+        return result.history["loss"][-1]
 
-        # mirrow the actions
-        actions_mirrowed = actions.copy()
-        actions_mirrowed[:,[0, 1]] = actions_mirrowed[:,[1, 0]]
-        actions = np.append(actions,actions_mirrowed, axis=0)
 
-        # combine observations with mirrow observations
-        state_memory = np.append(state_memory,state_memory_mirrowed, axis=0)
+    def get_steps_count(self):
+        return len(self.action_memory)
 
-        # double G
-        G = np.append(G,G, axis=0)
 
-        cost = self.policy.train_on_batch([state_memory, G], actions)
-        print("Cost:", cost)
-        return cost
+    def get_current_action(self):
+        return self.action_memory[-1]

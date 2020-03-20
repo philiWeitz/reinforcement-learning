@@ -1,0 +1,18 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+numpy = "*"
+seaborn = "*"
+keras = "*"
+pillow = "*"
+gym= "*"
+box2d-py = "*"
+tensorflow = "*"
+
+[requires]
+python_version = "3.7"

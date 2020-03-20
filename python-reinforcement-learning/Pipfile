@@ -9,8 +9,9 @@ verify_ssl = true
 numpy = "*"
 seaborn = "*"
 keras = "*"
-tensorflow = "*"
 pillow = "*"
+opencv-python = "*"
+tensorflow = "2.0.0-beta1"
 
 [requires]
 python_version = "3.7"
