@@ -8,6 +8,9 @@ from tensorflow.keras.models import load_model, Sequential, Model
 from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxPooling2D, Dropout, BatchNormalization, TimeDistributed, LSTM
 
 
+# TD Lambda - if 0 -> only look one step ahead TD0, 1 -> use all steps TD1
+LAMBDA = 0.6
+
 GAMMA = 0.99
 NR_OF_ACTIONS =3
 
@@ -55,12 +58,12 @@ class AgentTemporalDifference():
 
 
     def get_reward(self, is_on_track, is_terminal_state):
-        return 0 if is_on_track else -0.1
+        return 0.05 if is_on_track else -0.1
 
 
     def learn(self, is_finish_reached=False):
         self.T += 1
-        learning_rate = 0.001
+        learning_rate = 0.05
 
         rewards = self.reward_memory
         actions = self.action_memory
@@ -74,9 +77,14 @@ class AgentTemporalDifference():
 
         rewards.reverse()
         for reward in rewards:
-            rewards_gamma_tmp *= GAMMA 
+            rewards_gamma_tmp *= GAMMA
+
+            rewards_lambda = rewards_gamma_tmp * LAMBDA
+            rewards_lambda = np.append(rewards_lambda, reward)
+            rewards_discounted = np.append(sum(rewards_lambda), rewards_discounted)
+
             rewards_gamma_tmp = np.append(rewards_gamma_tmp, reward)
-            rewards_discounted = np.append(sum(rewards_gamma_tmp), rewards_discounted)
+            
 
         rewards.reverse()
 
@@ -93,7 +101,7 @@ class AgentTemporalDifference():
 
         # learn the new values
         X = np.array(state_memory)
-        y = np.clip(actions, -5, 5)
+        y = np.clip(actions, -15, 15)
 
         result = self.policy.fit(X, y, batch_size=512, epochs=1, verbose=0, shuffle=True)
         return result.history["loss"][-1]
