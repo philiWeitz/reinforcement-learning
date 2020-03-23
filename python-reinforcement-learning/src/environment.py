@@ -2,9 +2,8 @@ import numpy as np
 
 from visualization import Visualization
 
-# from agent_policy_gradient import AgentPolicyGradient
-from agent_policy_gradient_multi_frame import AgentPolicyGradient
-# from agent_policy_gradient_relu import AgentPolicyGradient
+from agent_temporal_difference import AgentTemporalDifference
+# from agent_policy_gradient_multi_frame import AgentPolicyGradient
 
 from tensorflow.keras.applications.mobilenet import preprocess_input
 
@@ -14,7 +13,7 @@ def expand_image_dimension(image):
 
 
 def preprocess_image(image):
-    return preprocess_input(image)
+    return (image - image.mean()) / 255
 
 
 def action_to_motion(action):
@@ -27,14 +26,22 @@ def action_to_motion(action):
     return motion
 
 
+def is_same_direction(previous_action, action):
+    prev = np.argmax(previous_action)
+    curr = np.argmax(action)
+    return prev == curr
+    
+
+
 class Environment:
     def __init__(self):
-        self.agent = AgentPolicyGradient()
+        self.agent = AgentTemporalDifference()
         self.visualization = Visualization()
         self.is_terminal_state = False
 
 
     def add_movement(self, move_model):
+        is_on_track = move_model['isOnTrack']
         self.is_terminal_state = move_model['isTerminalState']
         self.is_finish_reached = move_model['isFinishReached']
 
@@ -52,7 +59,7 @@ class Environment:
 
         # predict action and store current observation
         action = self.agent.choose_action(gray_scale_image)
-        reward = 0 if move_model['isOnTrack'] else -0.1
+        reward = self.agent.get_reward(is_on_track, self.is_finish_reached)
         
         self.agent.store_transaction(gray_scale_image, action, reward)
 

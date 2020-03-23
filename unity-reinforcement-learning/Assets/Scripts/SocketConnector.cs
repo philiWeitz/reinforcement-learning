@@ -41,6 +41,19 @@ public class SocketConnector : MonoBehaviour
         sendNextImage = true;
     }
 
+    private void CheckSocketState()
+    {
+        if(clientSocket != null && clientSocket.Poll(100, SelectMode.SelectRead))
+        {
+            CancelInvoke();
+            clientSocket.Dispose();
+            clientSocket = null;
+            sendNextImage = true;
+            Environment.instance.resetEnvironment = true;
+            Debug.Log("Socket connection was closed unexpectedly. Reseting socket...");
+        }
+    }
+
     private void SetupSocketConnection()
     {
         try
@@ -50,6 +63,8 @@ public class SocketConnector : MonoBehaviour
             clientSocket.BeginReceive(_recieveBuffer, 0, _recieveBuffer.Length, SocketFlags.None, new AsyncCallback(ReceiveCallback), null);
 
             InvokeRepeating("SendData", 1, repeatEverySec);
+            InvokeRepeating("CheckSocketState", 2, 4);
+
             Debug.Log("Socket connection established");
         }
         catch (SocketException) {
@@ -89,7 +104,7 @@ public class SocketConnector : MonoBehaviour
     private void SendData()
     {
         // only send picture when the simmulation is running
-        if (clientSocket.Connected && sendNextImage == true)
+        if (clientSocket != null && clientSocket.Connected && sendNextImage == true)
         {
             Texture2D agentTexture = GetAgentCameraTexture();
 
@@ -109,13 +124,6 @@ public class SocketConnector : MonoBehaviour
                 // wait until the data is read
                 sendNextImage = false;
             }
-        }
-        else if (clientSocket.Connected && clientSocket.Poll(100, SelectMode.SelectRead)) {
-            Debug.Log("Socket connection was closed unexpectedly. Reseting socket...");
-            clientSocket.Dispose();
-            clientSocket = null;
-            sendNextImage = true;
-            Environment.instance.resetEnvironment = true;
         }
     }
 

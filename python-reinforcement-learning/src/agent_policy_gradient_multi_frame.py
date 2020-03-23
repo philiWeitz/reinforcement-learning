@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxP
 
 
 GAMMA = 0.99
-LR = 0.05
+LR = 0.005
 
 NR_OF_ACTIONS = 2
 STEERING_IDX = 0
@@ -23,9 +23,9 @@ def moving_average(x, N):
 
 class AgentPolicyGradient():
     def __init__(self):
-        self.GAMMA=0.99
-        self.G = 0
-        self.policy, self.predict = self.build_policy_network()
+        self.loss_history = []
+
+        self.policy = self.build_policy_network()
         self.reset()
 
 
@@ -41,7 +41,7 @@ class AgentPolicyGradient():
         cnnModel.add(Conv2D(32, (5, 5), strides=2))
         cnnModel.add(MaxPooling2D(pool_size=(3,3), padding='valid'))
         cnnModel.add(Dense(200, activation='linear'))
-        cnnModel.add(Dense(100, activation='linear'))
+        # cnnModel.add(Dense(512, activation='linear'))
         cnnModel.add(Flatten())
 
         # advantages = Input(shape=[1])
@@ -56,15 +56,14 @@ class AgentPolicyGradient():
 
         policy = Model(inputs=[inputLayer], outputs=[angle_out])
         policy.compile(optimizer='adam', loss={'angle_out': 'mean_absolute_percentage_error'})
-        
-        predict = Model(inputs=[inputLayer], outputs=[angle_out])
-        return policy, predict
+
+        return policy
 
     
     def choose_action(self, observation):
         state = np.array(self.get_observation_buffer(observation))
         state = state[np.newaxis, :]
-        prediction = self.predict.predict(state)
+        prediction = self.policy.predict(state)
         return prediction[STEERING_IDX]
 
 
@@ -95,9 +94,12 @@ class AgentPolicyGradient():
             discounted_rewards[i] = running_add
 
         # standardize the rewards
-        discounted_rewards -= discounted_rewards.mean()
-        discounted_rewards /= discounted_rewards.std()
-        discounted_rewards = discounted_rewards.squeeze()
+        max_negative_reward = discounted_rewards.min()
+        max_positive_reward = discounted_rewards.max()
+
+        discounted_rewards[np.where(discounted_rewards < 0)] /= abs(max_negative_reward)
+        discounted_rewards[np.where(discounted_rewards > 0)] /= abs(max_positive_reward)
+
         return discounted_rewards
 
 
@@ -109,33 +111,51 @@ class AgentPolicyGradient():
             print("Invalid terminal state")
             return 0
 
-        print("Observations for training:", len(state_memory))
-        steering_actions = np.clip(action_memory, -0.8, 0.8)
-        steering_actions_smooth = moving_average(steering_actions, 3)
-        steering_actions_gradient_sum = sum(np.gradient(steering_actions_smooth))
+        print("Actions: ", np.around(action_memory.flatten(), 1))
+
+        factor = 1
+        if len(self.loss_history) >= 5:
+            gradient = abs(sum(np.gradient(self.loss_history)))
+            factor = factor if gradient < 10 else 10 
+            factor = factor if gradient < 200 else 50 
 
         advantages = self.get_discounted_rewards()
-        training_frame_idxs = np.where(advantages <= 0)
+        steering_actions = np.clip(action_memory, -1.0, 1.0)
+        steering_actions_updates = advantages * 0.01 * factor
+        steering_actions_update_idxs = np.where(advantages < 0)
 
-        # only adjust actions if it has negative examples
         if not is_finish_reached:
-            steering_action_changes = abs(advantages) * steering_actions_gradient_sum * LR
-            for action_idx in range(len(steering_actions)):
-                steering_actions[action_idx][0] += steering_action_changes[action_idx]
+            for idx in steering_actions_update_idxs[0]:
+                if steering_actions[idx][0] > 0:
+                    steering_actions[idx][0] += steering_actions_updates[idx]
+                else:
+                    steering_actions[idx][0] -= steering_actions_updates[idx]
         else:
-            training_frame_idxs = np.arange(len(advantages))
-            steering_actions = action_memory
+            print("Goal reached")
+            steering_actions = moving_average(steering_actions, 3)
 
         # network parameter
-        X = np.array(state_memory[training_frame_idxs])
-        angle = steering_actions[training_frame_idxs]
+        X = np.array(state_memory)
+        angle = steering_actions
     
         # shuffling seems to be very important!
         result = self.policy.fit(X, {
             'angle_out': angle
         }, batch_size=512, epochs=1, shuffle=True, verbose=0)
         
-        return result.history["loss"][-1]
+        loss = result.history["loss"][-1]
+
+        self.loss_history.append(loss)
+        self.loss_history  = self.loss_history[-5:]
+        if len(self.loss_history) >= 5:
+            print("Loss history:", sum(self.loss_history))
+            print("Gradient:", sum(np.gradient(self.loss_history)))
+
+        return loss
+
+
+    def get_reward(self, is_on_track, is_terminal_state):
+        return 0 if is_on_track else -0.1
 
 
     def get_steps_count(self):
@@ -147,4 +167,4 @@ class AgentPolicyGradient():
 
     
     def save_prediction_model(self):
-        self.predict.save('model.h5')
+        self.policy.save('model.h5')
