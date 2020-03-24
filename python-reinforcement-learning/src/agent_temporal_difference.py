@@ -9,7 +9,7 @@ from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxP
 
 
 # TD Lambda - if 0 -> only look one step ahead TD0, 1 -> use all steps TD1
-LAMBDA = 0.6
+LAMBDA = 0.8
 
 GAMMA = 0.99
 NR_OF_ACTIONS =3
@@ -51,7 +51,9 @@ class AgentTemporalDifference():
         return self.policy.predict(state)[0]
 
 
-    def store_transaction(self, observation, action, reward):
+    def store_transaction(self, observation, reward):
+        action = self.choose_action(observation)
+
         self.state_memory.append(observation)
         self.reward_memory.append(reward)
         self.action_memory.append(action)

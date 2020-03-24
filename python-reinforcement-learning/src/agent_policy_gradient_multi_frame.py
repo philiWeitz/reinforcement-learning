@@ -67,8 +67,10 @@ class AgentPolicyGradient():
         return prediction[STEERING_IDX]
 
 
-    def store_transaction(self, observation, action, reward):
+    def store_transaction(self, observation, reward):
+        action = self.choose_action(observation)
         state = self.get_observation_buffer(observation)
+        
         self.state_memory.append(state)
         self.action_memory.append(action)
         self.reward_memory.append(reward)

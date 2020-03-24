@@ -58,10 +58,9 @@ class Environment:
         gray_scale_image = preprocess_image(gray_scale_image)
 
         # predict action and store current observation
-        action = self.agent.choose_action(gray_scale_image)
         reward = self.agent.get_reward(is_on_track, self.is_finish_reached)
         
-        self.agent.store_transaction(gray_scale_image, action, reward)
+        self.agent.store_transaction(gray_scale_image, reward)
 
 
     def train_model_on_batch(self):
