@@ -24,3 +24,22 @@ If your agent made it through the whoole track, a model.h5 file will be created.
 1. navigate to ```cd ./python-reinforcement-learning```
 1. start the virtualenv ```pipenv shell```
 1. run script ```python3.7 ./test/test.py```
+
+## Run the game headless
+1. build the game using unity (name of the app in my case is "game-build")
+1. open comand line and navigate to ```cd <path-to-build>/game-build.app/Contents/MacOS```
+1. run the game in batch mode ```./game-build -batchmode```
+
+## Create a frame by frame recording
+1. navigate to ```cd ./python-reinforcement-learning```
+1. start the virtualenv ```pipenv shell```
+1. run the recording script ```python ./src/recording.py```
+1. open the unity project and start the game
+1. the recoding will be saved as soon as the goal is reached or you are off track
+
+## Analyse model using tensorboard
+1. navigate to ```cd ./python-reinforcement-learning```
+1. start the virtualenv ```pipenv shell```
+1. run ```tensorboard --logdir ./logs```
+1. start agent training
+1. open web interface ```http://localhost:6006/```

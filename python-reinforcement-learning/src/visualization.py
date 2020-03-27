@@ -74,7 +74,7 @@ class Visualization:
 
     def frames_to_file(self):
       fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-      fps = 24
+      fps = 15
       out = cv2.VideoWriter('track-video.avi', fourcc, fps, (120, 50), False)
       
       for frame in self.image_buffer:

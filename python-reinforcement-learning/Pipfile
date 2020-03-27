@@ -11,7 +11,8 @@ seaborn = "*"
 keras = "*"
 pillow = "*"
 opencv-python = "*"
-tensorflow = "2.0.0-beta1"
+tensorflow = "*"
+tensorboard = "*"
 
 [requires]
 python_version = "3.7"

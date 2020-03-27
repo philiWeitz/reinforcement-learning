@@ -63,3 +63,5 @@ crashlytics-build.properties
 
 *.h5
 *.avi
+
+logs/

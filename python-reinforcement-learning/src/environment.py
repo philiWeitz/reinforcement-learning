@@ -1,11 +1,7 @@
 import numpy as np
-
 from visualization import Visualization
-
-from agent_temporal_difference import AgentTemporalDifference
-# from agent_policy_gradient_multi_frame import AgentPolicyGradient
-
-from tensorflow.keras.applications.mobilenet import preprocess_input
+from agents.agent_temporal_difference import AgentTemporalDifference
+# from agents.agent_policy_gradient_multi_frame import AgentPolicyGradient
 
 
 def expand_image_dimension(image):
@@ -13,7 +9,7 @@ def expand_image_dimension(image):
 
 
 def preprocess_image(image):
-    return (image - image.mean()) / 255
+    return image / 255
 
 
 def action_to_motion(action):
@@ -60,20 +56,22 @@ class Environment:
         # predict action and store current observation
         reward = self.agent.get_reward(is_on_track, self.is_finish_reached)
         
-        self.agent.store_transaction(gray_scale_image, reward)
+        self.agent.store_transaction(gray_scale_image, reward, is_on_track)
 
 
     def train_model_on_batch(self):
         # if we reached the goal -> current model is already really good (save before retraining)
         if self.is_finish_reached:
-            self.agent.save_prediction_model()
+            print('Saving model to file...')
+            self.agent.save_model()
 
         loss_value = self.agent.learn(self.is_finish_reached)
-        self.visualization.add_loss_value(loss_value)
-        self.visualization.plot_loss_history()
+        # self.visualization.add_loss_value(loss_value)
+        # self.visualization.plot_loss_history()
 
         # write video to file if finish is reached
         if self.is_finish_reached:
+            print('Saving video to file...')
             self.visualization.frames_to_file()
 
         # step_count = self.agent.get_steps_count()
