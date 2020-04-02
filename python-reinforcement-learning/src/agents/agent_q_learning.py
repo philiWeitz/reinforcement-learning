@@ -1,6 +1,5 @@
-import functools
 import numpy as np
-import keras.backend as K
+import os
 
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
@@ -10,25 +9,28 @@ from tensorflow.keras.layers import Conv2D, Dropout, Flatten, Dense, Input, MaxP
 
 LEARNING_RATE = 0.001
 
-GAMMA = 0.95
+GAMMA = 0.99
 NR_OF_ACTIONS = 3
 
 
-class AgentTemporalDifference():
+class Agent():
     def __init__(self):
+        self.T = 0
         self.model = self.build_model()
         self.reset()
 
 
     def reset(self):
+        self.max_tiles_count = 0
         self.state_memory = []
         self.action_memory = []
         self.reward_memory = []
         self.selected_action_memory = []
+        self.on_track_frame_counter = 0
 
 
     def build_model(self):
-        input = Input(shape=(96, 96, 3), name='img_in')
+        input = Input(shape=(50, 120, 1), name='img_in')
                
         x = input
         x = Conv2D(16, (3, 3), data_format='channels_last')(x)
@@ -37,10 +39,10 @@ class AgentTemporalDifference():
         x = Flatten()(x)
 
         x = Dense(128, activation='relu')(x)
-        steering = Dense(NR_OF_ACTIONS, activation='linear')(x)
+        steering = Dense(NR_OF_ACTIONS, activation='relu')(x)
 
         model = Model(inputs=[input], outputs=[steering])
-        model.compile(optimizer=Adam(learning_rate=LEARNING_RATE), loss='mean_absolute_error')
+        model.compile(optimizer=Adam(learning_rate=LEARNING_RATE), loss='mse')
 
         print(model.summary())  
         return model
@@ -51,21 +53,32 @@ class AgentTemporalDifference():
         return self.model.predict(state)[0]
 
 
-    def store_transaction(self, observation, reward):
+    def store_transaction(self, observation,, is_on_track, is_final_state):
         action_vector = self.choose_action(observation)
-
+        reward = self.get_reward(is_on_track, is_terminal_state)
+        
         # select an action
-        if sum(action_vector) < 0.01:
-            self.selected_action_memory.append(np.random.choice(NR_OF_ACTIONS))
-        else:
-            self.selected_action_memory.append(np.argmax(action_vector))
+        self.selected_action_memory.append(np.argmax(action_vector))
+
+        if is_on_track:
+            self.on_track_frame_counter += 1
 
         self.state_memory.append(observation)
         self.reward_memory.append(reward)
         self.action_memory.append(action_vector)
 
 
+    def get_reward(self, is_on_track, is_terminal_state):
+        nr_of_tiles_done = round(self.on_track_frame_counter / 10)
+        if nr_of_tiles_done > self.max_tiles_count:
+            self.max_tiles_count = nr_of_tiles_done
+            return 3.0
+        return -0.1
+
+
     def learn(self, is_finish_reached=False):
+        self.T += 1
+
         rewards = self.reward_memory
         actions = self.action_memory
         state_memory = self.state_memory
@@ -77,9 +90,9 @@ class AgentTemporalDifference():
         # bellman equation calculation
         for reward_idx in reversed(range(len(rewards))):
             if len(expected_q_values) <= 0:
-                expected_q_values.insert(0, 1)
+                expected_q_values.insert(0, 0)
             else:
-                reward = rewards[reward_idx]
+                reward = rewards[reward_idx-1]
                 discount = expected_q_values[0] * GAMMA
                 expected_q_values.insert(0, reward + discount)
 
@@ -93,33 +106,32 @@ class AgentTemporalDifference():
         X = np.array(state_memory)
         y = np.array(actions)
 
-        # print some stats
-        print('-----------------')
-        # print('Observations received:', len(state_memory))
-        # print('Max Q value:', y.max())
-        # print('Min Q value:', y.min())
+        # log tensorboard data every 40 runs
+        callbacks = [tf.keras.callbacks.TensorBoard('logs')] if (self.T % 40) == 39 else []
 
-        result = self.model.fit(X, y, batch_size=512, epochs=1, verbose=0, shuffle=True)
+        result = self.model.fit(X, y, batch_size=512, epochs=1, verbose=0, shuffle=True, callbacks=callbacks)
         return result.history["loss"][-1]
 
 
-    def get_current_action(self):
-        result = [0.0, 1.0, 0.0]
+    def get_steps_count(self):
+        return len(self.action_memory)
 
+
+    def get_current_action(self):
         if (len(self.action_memory) < 1):
-            return result
+            return [0.0]
 
         action_idx = self.selected_action_memory[-1]
 
         # left steering
         if action_idx == 0:
-            result[0] = -0.8
+            return [-0.8]
         # right steering
-        elif action_idx == 2:
-            result[0] = 0.8
-
-        return result
-
-
-    def save_prediction_model(self):
-        self.model.save('car-racing-model.h5')
+        if action_idx == 2:
+            return [0.8]
+        # center steering
+        return [0.0]
+    
+    
+    def save_model(self):
+        self.model.save('model.h5')

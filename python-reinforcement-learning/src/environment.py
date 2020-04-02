@@ -1,6 +1,7 @@
 import numpy as np
 from visualization import Visualization
-from agents.agent_temporal_difference import AgentTemporalDifference
+# from agents.agent_q_learning import Agent
+from agents.agent_deep_q_learning import Agent
 # from agents.agent_policy_gradient_multi_frame import AgentPolicyGradient
 
 
@@ -22,16 +23,9 @@ def action_to_motion(action):
     return motion
 
 
-def is_same_direction(previous_action, action):
-    prev = np.argmax(previous_action)
-    curr = np.argmax(action)
-    return prev == curr
-    
-
-
 class Environment:
     def __init__(self):
-        self.agent = AgentTemporalDifference()
+        self.agent = Agent()
         self.visualization = Visualization()
         self.is_terminal_state = False
 
@@ -53,10 +47,7 @@ class Environment:
         gray_scale_image = expand_image_dimension(gray_scale_image)
         gray_scale_image = preprocess_image(gray_scale_image)
 
-        # predict action and store current observation
-        reward = self.agent.get_reward(is_on_track, self.is_finish_reached)
-        
-        self.agent.store_transaction(gray_scale_image, reward, is_on_track)
+        self.agent.store_transaction(gray_scale_image, is_on_track, self.is_terminal_state)
 
 
     def train_model_on_batch(self):
@@ -65,7 +56,7 @@ class Environment:
             print('Saving model to file...')
             self.agent.save_model()
 
-        loss_value = self.agent.learn(self.is_finish_reached)
+        self.agent.learn(self.is_finish_reached)
         # self.visualization.add_loss_value(loss_value)
         # self.visualization.plot_loss_history()
 
