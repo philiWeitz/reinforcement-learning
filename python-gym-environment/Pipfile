@@ -14,8 +14,8 @@ pillow = "*"
 gym= "*"
 box2d-py = "*"
 tensorflow = "*"
-sklearn = "*"
-atari-py = "*"
+scikit-image = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.7"
