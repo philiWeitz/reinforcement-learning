@@ -1,6 +1,6 @@
 # Unity - Python Reinforcement Learning
 
-![Example](/documents/example.gif)
+![Example](/documents/environment.gif)
 
 ## install dependencies
 1. navigate to ```cd ./python-reinforcement-learning```
@@ -23,7 +23,7 @@ If your agent made it through the whoole track, a model.h5 file will be created.
 1. check that a valid model.h5 file is available
 1. navigate to ```cd ./python-reinforcement-learning```
 1. start the virtualenv ```pipenv shell```
-1. run script ```python3.7 ./test/test.py```
+1. run script ```python3.7 ./src/test.py```
 
 ## Run the game headless
 1. build the game using unity (name of the app in my case is "game-build")
@@ -37,7 +37,13 @@ If your agent made it through the whoole track, a model.h5 file will be created.
 1. open the unity project and start the game
 1. the recoding will be saved as soon as the goal is reached or you are off track
 
-## Analyse model using tensorboard
+## Next Up
+1. give higher rewards to agents which complete the track with the least steps
+1. add additional exploraton strategies such as RND or self-supervised prediction
+- https://towardsdatascience.com/explained-curiosity-driven-learning-in-rl-exploration-by-random-network-distillation-72b18e69eb1b
+- https://medium.com/data-from-the-trenches/curiosity-driven-learning-through-next-state-prediction-f7f4e2f592fa
+
+## Analyse the model using tensorboard (Not Implemented Yet)
 1. navigate to ```cd ./python-reinforcement-learning```
 1. start the virtualenv ```pipenv shell```
 1. run ```tensorboard --logdir ./logs```

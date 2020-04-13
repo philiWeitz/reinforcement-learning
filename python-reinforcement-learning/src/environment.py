@@ -1,9 +1,6 @@
 import numpy as np
 from visualization import Visualization
-# from agents.agent_q_learning import Agent
-from agents.agent_deep_q_learning import Agent
-# from agents.agent_policy_gradient_multi_frame import AgentPolicyGradient
-
+from agent import PPOAgent
 
 def expand_image_dimension(image):
     return np.expand_dims(image, axis=2)
@@ -25,7 +22,7 @@ def action_to_motion(action):
 
 class Environment:
     def __init__(self):
-        self.agent = Agent()
+        self.agent = PPOAgent(load_model_from_file=False)
         self.visualization = Visualization()
         self.is_terminal_state = False
 
@@ -47,32 +44,33 @@ class Environment:
         gray_scale_image = expand_image_dimension(gray_scale_image)
         gray_scale_image = preprocess_image(gray_scale_image)
 
-        self.agent.store_transaction(gray_scale_image, is_on_track, self.is_terminal_state)
+        state = gray_scale_image
+        value = self.agent.get_value(state)
+        action, probability = self.agent.get_action(state) 
+        reward = 1 if is_on_track else -0.1
+        done = self.is_terminal_state
+
+        self.agent.store_transition(value, state, action, reward, done, probability)
 
 
     def train_model_on_batch(self):
+        step_count = self.agent.get_steps_count()
+        self.visualization.add_steps_value(step_count)
+        self.visualization.plot_steps_history()
+
         # if we reached the goal -> current model is already really good (save before retraining)
         if self.is_finish_reached:
             print('Saving model to file...')
-            self.agent.save_model()
+            self.agent.save_models()
 
-        self.agent.learn(self.is_finish_reached)
-        # self.visualization.add_loss_value(loss_value)
-        # self.visualization.plot_loss_history()
+        self.agent.learn()
 
         # write video to file if finish is reached
         if self.is_finish_reached:
             print('Saving video to file...')
             self.visualization.frames_to_file()
 
-        # step_count = self.agent.get_steps_count()
-        # self.visualization.plot_steering(self.agent.action_memory)
-
-        # self.visualization.add_steps_value(step_count)
-        # self.visualization.plot_steps_history()
-
         self.visualization.reset_image_buffer()
-        self.agent.reset()
 
 
     def get_predicted_motion(self):
