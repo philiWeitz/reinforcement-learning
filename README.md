@@ -1,6 +1,6 @@
 # Unity - Python Reinforcement Learning
 
-![Example](/documents/environment.gif)
+![Example](/documents/office.gif)
 
 ## Install dependencies
 1. navigate to ```cd ./python-reinforcement-learning```
