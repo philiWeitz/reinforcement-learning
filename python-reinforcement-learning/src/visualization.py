@@ -13,6 +13,7 @@ class Visualization:
 
     def __init__(self):
       self.loss_history = np.array([])
+      self.reward_history = np.array([])
       self.steps_history = np.array([])
       self.image_show_timeout = time.time() * 1000.0
       self.image_buffer = []
@@ -34,6 +35,10 @@ class Visualization:
       self.steps_history = np.append(self.steps_history, steps_value)
 
 
+    def add_reward_value(self, reward_value):
+      self.reward_history = np.append(self.reward_history, reward_value)
+
+
     def plot_loss_history(self):
       plt.figure(0)
       plt.cla()
@@ -50,27 +55,35 @@ class Visualization:
       plt.show(block=False)
       plt.pause(0.001)
 
+    def plot_reward_history(self):
+      plt.figure(2)
+      ax = sns.lineplot(data=self.reward_history)
+      ax.set_title('Reward History')
+      plt.show(block=False)
+      plt.pause(0.001)
+
 
     def plot_steering(self, actions):
       data = np.array(actions).flatten()
-      plt.figure(2)
+      plt.figure(3)
       plt.cla()
       ax = sns.lineplot(data=data)
       ax.set_title('Steering')
       plt.show(block=False)
       plt.pause(0.001)
-
     
+
     def show_agent_input_image(self, image):
       now = time.time() * 1000.0
 
       if now > self.image_show_timeout:
-        plt.figure(3)
+        plt.figure(4)
         plt.title('Agent Input Image')
         plt.imshow(image, cmap='gray', vmin=0, vmax=255)
         plt.show(block=False)
         plt.pause(0.001)
         self.image_show_timeout = now + AGENT_IMAGE_TIMEOUT_SEC
+
 
     def frames_to_file(self):
       fourcc = cv2.VideoWriter_fourcc('M','J','P','G')

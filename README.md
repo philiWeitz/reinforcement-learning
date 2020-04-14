@@ -2,7 +2,7 @@
 
 ![Example](/documents/environment.gif)
 
-## install dependencies
+## Install dependencies
 1. navigate to ```cd ./python-reinforcement-learning```
 1. start a new virtualenv ```pipenv shell```
 1. install all dependencies ```pipenv install```
@@ -18,7 +18,7 @@
 1. run scene
 
 ## Testing your model against real data
-If your agent made it through the whoole track, a model.h5 file will be created. The test script will generate a video visualizing how your agent would have reacted given real "markkuu" images.
+If your agent made it through the whole track, a ppo_actor.h5 and a ppo_critic.h5 file will be created. The test script will generate a video visualizing how your agent would reacted given real "markku" images (https://markku.ai/).
 
 1. check that a valid model.h5 file is available
 1. navigate to ```cd ./python-reinforcement-learning```

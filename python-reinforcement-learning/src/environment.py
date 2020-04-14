@@ -47,23 +47,26 @@ class Environment:
         state = gray_scale_image
         value = self.agent.get_value(state)
         action, probability = self.agent.get_action(state) 
-        reward = 1 if is_on_track else -0.1
+        reward = 1.0 if is_on_track else -0.1
         done = self.is_terminal_state
 
         self.agent.store_transition(value, state, action, reward, done, probability)
 
 
     def train_model_on_batch(self):
-        step_count = self.agent.get_steps_count()
-        self.visualization.add_steps_value(step_count)
-        self.visualization.plot_steps_history()
+        # step_count = self.agent.get_steps_count()
+        # self.visualization.add_steps_value(step_count)
+        # self.visualization.plot_steps_history()
+        
+        self.visualization.add_reward_value(self.agent.get_reward_sum())
+        self.visualization.plot_reward_history()
 
         # if we reached the goal -> current model is already really good (save before retraining)
         if self.is_finish_reached:
             print('Saving model to file...')
             self.agent.save_models()
 
-        self.agent.learn()
+        self.agent.learn(self.is_finish_reached)
 
         # write video to file if finish is reached
         if self.is_finish_reached:

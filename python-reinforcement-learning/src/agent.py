@@ -118,7 +118,7 @@ class PPOAgent:
         serial = Conv2D(32, (5, 5), strides=2)(serial)
         serial = MaxPooling2D(pool_size=(3,3), padding='valid')(serial)
         serial = Flatten()(serial)
-        serial = Dense(24, activation='relu', kernel_initializer='he_uniform')(serial)
+        serial = Dense(64, activation='relu', kernel_initializer='he_uniform')(serial)
         output = Dense(self.action_size, activation='softmax', kernel_initializer='he_uniform')(serial)
         
         actor = Model(inputs=[state_input, advantage, old_prediction], outputs=[output])
@@ -133,7 +133,7 @@ class PPOAgent:
         serial = Conv2D(32, (5, 5), strides=2)(serial)
         serial = MaxPooling2D(pool_size=(3,3), padding='valid')(serial)
         serial = Flatten()(serial)
-        serial = Dense(24, activation='relu', kernel_initializer='he_uniform')(serial)
+        serial = Dense(64, activation='relu', kernel_initializer='he_uniform')(serial)
         output = Dense(self.value_size, activation='linear', kernel_initializer='he_uniform')(serial)
 
         critic = Model(inputs=[state_input], outputs=[output])
@@ -188,18 +188,28 @@ class PPOAgent:
         self.reward_mem = []
         self.mask_mem = []
         self.probability_mem = []
+        self.batch_reward_mem = []
 
     def store_transition(self, value, state_stack, action, reward, done, probability):
         self.value_mem.append(value)
         self.state_mem.append(state_stack)
         self.action_mem.append(action)
-        self.reward_mem.append(reward)
+        self.batch_reward_mem.append(reward)
         self.mask_mem.append(0 if done == True else 1)
         self.probability_mem.append(probability)
 
-    def learn(self):
+    def learn(self, is_finish_reached):
         self.T += 1
 
+        # add a small bonus on top when goal is reached
+        if is_finish_reached:
+            bonus = 200.0 / len(self.batch_reward_mem) 
+            self.batch_reward_mem = np.array(self.batch_reward_mem)
+            self.batch_reward_mem[np.where(self.batch_reward_mem > 0)] += bonus
+   
+        self.reward_mem.extend(self.batch_reward_mem)
+        self.batch_reward_mem = []
+        
         # don't train if batch size is not reached yet
         # if (len(self.state_mem) < BATCH_SIZE):
         #     return
@@ -223,6 +233,9 @@ class PPOAgent:
 
     def get_steps_count(self):
         return len(self.action_mem)
+
+    def get_reward_sum(self):
+        return sum(self.batch_reward_mem)
 
     def get_current_action(self):
         if (len(self.action_mem) < 1):
