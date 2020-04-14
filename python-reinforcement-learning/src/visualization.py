@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import random
 import time
 import cv2
 
@@ -55,6 +56,7 @@ class Visualization:
       plt.show(block=False)
       plt.pause(0.001)
 
+
     def plot_reward_history(self):
       plt.figure(2)
       ax = sns.lineplot(data=self.reward_history)
@@ -84,10 +86,21 @@ class Visualization:
         plt.pause(0.001)
         self.image_show_timeout = now + AGENT_IMAGE_TIMEOUT_SEC
 
+      
+    def show_random_agent_input_image(self):
+      self.image_buffer
+      image = random.choice(self.image_buffer)
+
+      plt.figure(4)
+      plt.title('Random Agent Input Image')
+      plt.imshow(image, cmap='gray', vmin=0, vmax=255)
+      plt.show(block=False)
+      plt.pause(0.001)
+
 
     def frames_to_file(self):
       fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-      fps = 15
+      fps = 12
       out = cv2.VideoWriter('track-video.avi', fourcc, fps, (120, 50), False)
       
       for frame in self.image_buffer:

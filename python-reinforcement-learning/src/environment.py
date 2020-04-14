@@ -37,7 +37,7 @@ class Environment:
         gray_scale_image = np.reshape(colors, (50, 120))
         gray_scale_image = np.flip(gray_scale_image, 0)
         self.visualization.add_image(gray_scale_image)
-        
+
         # show the input image
         # self.visualization.show_agent_input_image(gray_scale_image)
 
@@ -46,7 +46,7 @@ class Environment:
 
         state = gray_scale_image
         value = self.agent.get_value(state)
-        action, probability = self.agent.get_action(state) 
+        action, probability = self.agent.get_action(state)
         reward = 1.0 if is_on_track else -0.1
         done = self.is_terminal_state
 
@@ -57,7 +57,8 @@ class Environment:
         # step_count = self.agent.get_steps_count()
         # self.visualization.add_steps_value(step_count)
         # self.visualization.plot_steps_history()
-        
+        # self.visualization.show_random_agent_input_image()
+
         self.visualization.add_reward_value(self.agent.get_reward_sum())
         self.visualization.plot_reward_history()
 

@@ -14,6 +14,9 @@ public class Environment : MonoBehaviour
     public volatile GameObject finishLine;
     public volatile GameObject trackMeshHolder;
 
+    public Light sun;
+    public volatile bool enableSunTransition = true;
+
 
     void FixedUpdate()
     {
@@ -26,11 +29,26 @@ public class Environment : MonoBehaviour
         if (Environment.instance == null)
         {
             Environment.instance = this;
+            InvokeRepeating("UpdateSunPosition", 1, 5);
         }
         else if (Environment.instance != this)
         {
             Destroy(this.gameObject);
         }
         DontDestroyOnLoad(this.gameObject);
+    }
+
+    private void UpdateSunPosition()
+    {
+        if (enableSunTransition && sun)
+        {
+            float angle = (sun.transform.rotation.eulerAngles.y + 1);
+            if (angle > 300)
+            {
+                angle = 230;
+            }
+            sun.transform.rotation = Quaternion.Euler(
+                sun.transform.rotation.eulerAngles.x, angle, sun.transform.rotation.eulerAngles.z);
+        }
     }
 }
