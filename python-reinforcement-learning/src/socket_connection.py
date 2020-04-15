@@ -53,6 +53,8 @@ class SocketConnector:
 
                             except Exception as e:
                                 print('Error:', e)
+                    else:
+                        break
 
             except Exception as e:
                 print('Error:', e)
