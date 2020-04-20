@@ -1,6 +1,7 @@
 import numpy as np
 from visualization import Visualization
 from agent import PPOAgent
+# from agent_with_throttle import PPOAgent
 
 def expand_image_dimension(image):
     return np.expand_dims(image, axis=2)
@@ -11,11 +12,12 @@ def preprocess_image(image):
 
 
 def action_to_motion(action):
-    clipped_steering = np.clip(action[0], -1, 1)
+    clipped_steering = np.clip(action[0], -1.0, 1.0)
+    clipped_throttle = np.clip(action[1], 0, 1.0)
 
     motion = {}
     motion['steering'] = round(float(clipped_steering), 3)
-    motion['acceleration'] = 1.0
+    motion['acceleration'] = round(float(clipped_throttle), 3)
 
     return motion
 
@@ -44,11 +46,19 @@ class Environment:
         gray_scale_image = expand_image_dimension(gray_scale_image)
         gray_scale_image = preprocess_image(gray_scale_image)
 
-        state = gray_scale_image
+        # this will hopefully give the agent an understanding of speed
+        prev_throttle = self.agent.get_previous_throttle()
+        previous_throttle_state = np.full_like(gray_scale_image, prev_throttle / 10.0)
+
+        state = np.append(gray_scale_image, previous_throttle_state, axis=2)
         value = self.agent.get_value(state)
         action, probability = self.agent.get_action(state)
-        reward = 1.0 if is_on_track else -0.1
         done = self.is_terminal_state
+
+        # reward = 1.0 if action == 1 else 0.9
+        # reward = 1.0 if action[1] == 0 else 0.5
+        # reward = reward + 0.2 if action[0] == 1 else reward
+        reward = 1.0 if is_on_track else -0.1
 
         self.agent.store_transition(value, state, action, reward, done, probability)
 
